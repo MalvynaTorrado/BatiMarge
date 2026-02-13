@@ -1,6 +1,10 @@
 import streamlit as st
 import pandas as pd
 
+# --- MÉMOIRE DU DEVIS ---
+if 'mon_devis' not in st.session_state:
+    st.session_state['mon_devis'] = []
+    
 # --- CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="BatiMarge Pro", layout="centered") # 'centered' fait moins vide sur PC
 
@@ -157,4 +161,5 @@ def module_signature(nom_client):
 
 # --- TEST DANS L'APPLICATION ---
 # chemin_fichier = module_signature("M. Dupont")
+
 
