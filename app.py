@@ -1,135 +1,108 @@
+import streamlit as st
+import pandas as pd
+from datetime import datetime
 
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.application import MIMEApplication
-from email.mime.text import MIMEText
+# --- CONFIGURATION DE LA PAGE ---
+st.set_page_config(page_title="BatiMarge - Expert Rentabilité", page_icon="🏗️")
 
-def envoyer_email_devis(destinataire, fichier_pdf):
-    # Configuration (à mettre dans des variables secrètes)
-    expediteur = "votre.entreprise@gmail.com"
-    mot_de_passe = "votre_code_application" # Code spécifique Google
+# --- STYLE PERSONNALISÉ (Couleurs BatiMarge) ---
+st.markdown("""
+    <style>
+    .main { background-color: #f5f5f5; }
+    .stButton>button { background-color: #FF8C00; color: white; border-radius: 5px; }
+    .stMetric { background-color: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    </style>
+    """, unsafe_allow_html=True)
 
-    # Construction du message
-    msg = MIMEMultipart()
-    msg['Subject'] = "Votre Devis Travaux - Artisan Pro"
-    msg['From'] = expediteur
-    msg['To'] = destinataire
-    msg.attach(MIMEText("Bonjour, veuillez trouver ci-joint votre devis. Cordialement."))
+# --- TITRE ET LOGO ---
+st.title("🏗️ BatiMarge")
+st.caption("L'assistant qui sécurise vos chantiers et vos bénéfices.")
 
-    # Pièce jointe
-    with open(fichier_pdf, "rb") as f:
-        part = MIMEApplication(f.read(), Name=fichier_pdf)
-        part['Content-Disposition'] = f'attachment; filename="{fichier_pdf}"'
-        msg.attach(part)
+# --- NAVIGATION ---
+menu = ["Tableau de bord", "Nouveau Devis", "Scan-Marge", "Mon Catalogue"]
+choice = st.sidebar.selectbox("Menu", menu)
 
-    # Envoi
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-        server.login(expediteur, mot_de_passe)
-        server.send_message(msg)
-# --- SECTION IMPORTATION ---
-st.sidebar.header("📦 Mise à jour du Catalogue")
-fichier_prix = st.sidebar.file_uploader("Importer un fichier Excel/CSV de prix", type=['xlsx', 'csv'])
+# --- INITIALISATION DES DONNÉES (Session State) ---
+if 'devis_items' not in st.session_state:
+    st.session_state.devis_items = []
 
-# Base de données par défaut si aucun fichier n'est chargé
-PRIX_MARCHE = {
-    "Placo BA13 (m²)": 14.80,
-    "Peinture Velours (L)": 22.50
-}
-
-if fichier_prix is not None:
-    try:
-        # Lecture du fichier (Excel ou CSV)
-        if fichier_prix.name.endswith('.csv'):
-            df_catalogue = pd.read_csv(fichier_prix)
-        else:
-            df_catalogue = pd.read_excel(fichier_prix)
-        
-        # On transforme le tableau en dictionnaire pour l'appli
-        # On suppose que le fichier a des colonnes 'Désignation' et 'Prix'
-        PRIX_MARCHE = dict(zip(df_catalogue['Désignation'], df_catalogue['Prix']))
-        st.sidebar.success(f"{len(PRIX_MARCHE)} articles chargés !")
-    except Exception as e:
-        st.sidebar.error("Erreur de format : Vérifiez les colonnes 'Désignation' et 'Prix'")
-# --- CONFIGURATION ET BDD ---
-st.set_page_config(page_title="Artisan Devis Pro", layout="wide")
-
-def init_db():
-    conn = sqlite3.connect('artisan.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS devis 
-                 (id INTEGER PRIMARY KEY, client TEXT, date TEXT, total_ht REAL, marge REAL)''')
-    conn.commit()
-    conn.close()
-
-init_db()
-
-# --- DONNÉES PRIX DU MARCHÉ ---
-PRIX_MARCHE = {
-    "Peinture Velours (L)": 22.50,
-    "Placo BA13 (m²)": 14.80,
-    "Sac de Ciment (35kg)": 8.90,
-    "Carrelage Grès Cérame (m²)": 35.00
-}
-
-# --- INTERFACE ---
-st.title("🏗️ Générateur de Devis au Juste Prix")
-
-col1, col2 = st.columns([1, 1])
-
-with col1:
-    st.header("1. Détails du Devis")
-    nom_client = st.text_input("Nom du Client")
-    marge = st.slider("Votre Marge sur Matériaux (%)", 0, 50, 20)
-    taux_horaire = st.number_input("Votre Taux Horaire (€/h)", value=45)
+# --- 1. TABLEAU DE BORD ---
+if choice == "Tableau de bord":
+    st.header("Statistiques du mois")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Devis envoyés", "12")
+    col2.metric("Chiffre d'Affaires", "14 500 €")
+    col3.metric("Marge moyenne", "32%", "+2%")
     
-    st.subheader("Articles à ajouter")
-    article = st.selectbox("Choisir un matériau (Prix Marché)", list(PRIX_MARCHE.keys()))
-    qte = st.number_input("Quantité", min_value=1, value=1)
-    heures = st.number_input("Temps de pose (heures)", min_value=0.0, value=1.0)
+    st.info("💡 Conseil BatiMarge : Le prix du cuivre a augmenté de 5%. Pensez à ajuster vos devis d'électricité.")
+
+# --- 2. NOUVEAU DEVIS ---
+elif choice == "Nouveau Devis":
+    st.header("Créer un devis")
     
-    if st.button("Ajouter au devis"):
-        if 'panier' not in st.session_state:
-            st.session_state.panier = []
-        
-        prix_base = PRIX_MARCHE[article]
-        prix_vente = prix_base * (1 + marge/100)
-        total_ligne = (prix_vente * qte) + (heures * taux_horaire)
-        
-        st.session_state.panier.append({
-            "Désignation": article,
-            "Qté": qte,
-            "Prix Marché": f"{prix_base}€",
-            "Prix HT (Marge incl.)": f"{total_ligne:.2f}€"
-        })
+    with st.expander("👤 Informations Client", expanded=True):
+        nom_client = st.text_input("Nom du client")
+        adresse = st.text_area("Adresse du chantier")
 
-with col2:
-    st.header("2. Récapitulatif")
-    if 'panier' in st.session_state and st.session_state.panier:
-        df = pd.DataFrame(st.session_state.panier)
-        st.table(df)
+    with st.container():
+        st.subheader("📦 Articles")
+        nom_art = st.text_input("Désignation de l'article")
+        col_p1, col_p2, col_p3 = st.columns(3)
         
-        # Calcul du Total
-        total_final = sum([float(x.replace('€', '')) for x in df["Prix HT (Marge incl.)"]])
-        st.metric("TOTAL DEVIS HT", f"{total_final:.2f} €")
+        prix_achat = col_p1.number_input("Prix Achat HT (€)", min_value=0.0, step=0.1)
+        coeff = col_p2.number_input("Coeff. Marge", min_value=1.0, value=1.5, step=0.1)
+        quantite = col_p3.number_input("Quantité", min_value=1, value=1)
         
-        if st.button("Enregistrer le Devis"):
-            conn = sqlite3.connect('artisan.db')
-            c = conn.cursor()
-            c.execute("INSERT INTO devis (client, date, total_ht, marge) VALUES (?, ?, ?, ?)", 
-                      (nom_client, datetime.now().strftime("%d/%m/%Y"), total_final, marge))
-            conn.commit()
-            conn.close()
-            st.success("Devis enregistré avec succès !")
-    else:
-        st.info("Ajoutez des articles pour commencer le chiffrage.")
+        prix_vente_unit = prix_achat * coeff
+        
+        if st.button("➕ Ajouter l'article"):
+            item = {
+                "Désignation": nom_art,
+                "Quantité": quantite,
+                "Prix Achat HT": prix_achat,
+                "Prix Vente HT": prix_vente_unit,
+                "Total HT": prix_vente_unit * quantite
+            }
+            st.session_state.devis_items.append(item)
+            st.success("Article ajouté !")
 
-# --- HISTORIQUE ---
-st.divider()
-st.header("📜 Historique des Devis")
-conn = sqlite3.connect('artisan.db')
-historique_df = pd.read_sql_query("SELECT * FROM devis ORDER BY id DESC", conn)
-st.dataframe(historique_df, use_container_width=True)
-conn.close()
+    # Affichage du tableau du devis
+    if st.session_state.devis_items:
+        df = pd.DataFrame(st.session_state.devis_items)
+        st.table(df[["Désignation", "Quantité", "Prix Vente HT", "Total HT"]])
+        
+        total_devis = df["Total HT"].sum()
+        st.subheader(f"Total Devis : {total_devis:,.2f} € HT")
+        
+        if st.button("💾 Générer le PDF (Simulé)"):
+            st.balloons()
+            st.success(f"Devis pour {nom_client} prêt à être envoyé !")
+
+# --- 3. SCAN-MARGE (Killer Feature) ---
+elif choice == "Scan-Marge":
+    st.header("📸 Scan-Marge")
+    st.write("Scannez le code-barres d'un produit pour l'ajouter avec votre marge.")
+    
+    img_file = st.camera_input("Prise de vue du code-barres")
+    
+    if img_file:
+        st.warning("Recherche du produit dans la base de données...")
+        # Simulation de détection
+        st.success("Produit détecté : Sac de Ciment 35kg")
+        p_achat_simule = 8.50
+        st.write(f"Prix d'achat constaté : **{p_achat_simule} € HT**")
+        
+        marge_pref = st.slider("Ajuster la marge pour ce produit", 1.0, 3.0, 1.8)
+        st.info(f"Prix de vente suggéré : **{(p_achat_simule * marge_pref):.2f} € HT**")
+        
+        if st.button("Ajouter ce prix au devis"):
+             st.success("Ciment ajouté au devis en cours.")
+
+# --- 4. CATALOGUE ---
+elif choice == "Mon Catalogue":
+    st.header("🗂️ Mes Tarifs Matériaux")
+    st.write("Importez ou modifiez votre liste de prix fournisseurs.")
+    uploaded_file = st.file_view = st.file_uploader("Importer un fichier Excel/CSV", type=["csv", "xlsx"])
 
 
 
