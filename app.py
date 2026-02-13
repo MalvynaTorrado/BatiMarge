@@ -49,10 +49,25 @@ if menu == "Clients":
         nom = st.text_input("Nom / Entreprise")
         tel = st.text_input("Téléphone")
         if st.button("Enregistrer le client"):
-            nouveau_client = pd.DataFrame([{"Nom": nom, "Contact": tel}])
-            nouveau_client.to_csv(CLIENTS_FILE, mode='a', header=False, index=False)
-            st.success("Client enregistré !")
+            if nom:
+                nouveau_client = pd.DataFrame([{"Nom": nom, "Contact": tel}])
+                # On ajoute le client et on crée les titres de colonnes s'ils n'existent pas
+                nouveau_client.to_csv(CLIENTS_FILE, mode='a', header=not os.path.exists(CLIENTS_FILE) or os.stat(CLIENTS_FILE).st_size == 0, index=False)
+                st.success("Client enregistré ! Rafraîchissez la page.")
+            else:
+                st.error("Le nom est obligatoire.")
 
+    st.subheader("Liste de vos clients")
+    
+    # --- LA SÉCURITÉ ANTI-ERREUR ICI ---
+    try:
+        if os.path.exists(CLIENTS_FILE) and os.stat(CLIENTS_FILE).st_size > 0:
+            df_c = pd.read_csv(CLIENTS_FILE)
+            st.table(df_c)
+        else:
+            st.info("Votre liste de clients est vide pour le moment.")
+    except Exception:
+        st.info("Commencez par ajouter votre premier client ci-dessus.")
     st.subheader("Liste de vos clients")
     df_c = pd.read_csv(CLIENTS_FILE)
     if not df_c.empty:
@@ -111,6 +126,7 @@ elif menu == "Archives Devis":
             st.table(df_a[df_a["Nom Devis"] == selection])
         else:
             st.info("Aucune archive trouvée.")
+
 
 
 
