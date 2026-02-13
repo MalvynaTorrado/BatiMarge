@@ -4,33 +4,34 @@ import pandas as pd
 from datetime import datetime
 import streamlit as st
 import pandas as pdimport streamlit as st
-import pandas as pd
 
-# --- SECTION IMPORTATION ---
-st.sidebar.header("📦 Mise à jour du Catalogue")
-fichier_prix = st.sidebar.file_uploader("Importer un fichier Excel/CSV de prix", type=['xlsx', 'csv'])
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
+from email.mime.text import MIMEText
 
-# Base de données par défaut si aucun fichier n'est chargé
-PRIX_MARCHE = {
-    "Placo BA13 (m²)": 14.80,
-    "Peinture Velours (L)": 22.50
-}
+def envoyer_email_devis(destinataire, fichier_pdf):
+    # Configuration (à mettre dans des variables secrètes)
+    expediteur = "votre.entreprise@gmail.com"
+    mot_de_passe = "votre_code_application" # Code spécifique Google
 
-if fichier_prix is not None:
-    try:
-        # Lecture du fichier (Excel ou CSV)
-        if fichier_prix.name.endswith('.csv'):
-            df_catalogue = pd.read_csv(fichier_prix)
-        else:
-            df_catalogue = pd.read_excel(fichier_prix)
-        
-        # On transforme le tableau en dictionnaire pour l'appli
-        # On suppose que le fichier a des colonnes 'Désignation' et 'Prix'
-        PRIX_MARCHE = dict(zip(df_catalogue['Désignation'], df_catalogue['Prix']))
-        st.sidebar.success(f"{len(PRIX_MARCHE)} articles chargés !")
-    except Exception as e:
-        st.sidebar.error("Erreur de format : Vérifiez les colonnes 'Désignation' et 'Prix'")
+    # Construction du message
+    msg = MIMEMultipart()
+    msg['Subject'] = "Votre Devis Travaux - Artisan Pro"
+    msg['From'] = expediteur
+    msg['To'] = destinataire
+    msg.attach(MIMEText("Bonjour, veuillez trouver ci-joint votre devis. Cordialement."))
 
+    # Pièce jointe
+    with open(fichier_pdf, "rb") as f:
+        part = MIMEApplication(f.read(), Name=fichier_pdf)
+        part['Content-Disposition'] = f'attachment; filename="{fichier_pdf}"'
+        msg.attach(part)
+
+    # Envoi
+    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+        server.login(expediteur, mot_de_passe)
+        server.send_message(msg)
 # --- SECTION IMPORTATION ---
 st.sidebar.header("📦 Mise à jour du Catalogue")
 fichier_prix = st.sidebar.file_uploader("Importer un fichier Excel/CSV de prix", type=['xlsx', 'csv'])
@@ -135,6 +136,7 @@ conn = sqlite3.connect('artisan.db')
 historique_df = pd.read_sql_query("SELECT * FROM devis ORDER BY id DESC", conn)
 st.dataframe(historique_df, use_container_width=True)
 conn.close()
+
 
 
 
