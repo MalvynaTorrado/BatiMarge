@@ -97,7 +97,42 @@ elif menu == "Nouveau Devis":
         pv = pa * co
         
         if st.button("🛒 AJOUTER"):
-            pd.DataFrame(
+            pd.DataFrame([{"Client": client, "Article": art, "Vente HT": pv, "Marge": pv-pa}]).to_csv(PANIER_TEMP_FILE, mode='a', header=False, index=False)
+            st.rerun()
+        
+        st.write("---")
+        df_p = pd.read_csv(PANIER_TEMP_FILE)
+        if not df_p.empty:
+            st.table(df_p)
+            n_d = st.text_input("Nom du chantier :")
+            if st.button("💾 ARCHIVER LE DEVIS"):
+                df_p["Nom Devis"] = n_d
+                df_p.to_csv(DEVIS_FILE, mode='a', header=False, index=False)
+                pd.DataFrame(columns=["Client", "Article", "Vente HT", "Marge"]).to_csv(PANIER_TEMP_FILE, index=False)
+                st.success("Archivé !")
+                st.rerun()
+
+# (Les autres pages restent identiques au code précédent...)
+elif menu == "Fiches Clients":
+    st.title("👥 Clients")
+    n = st.text_input("Nom")
+    if st.button("Ajouter"):
+        pd.DataFrame([{"Nom": n, "Contact": ""}]).to_csv(CLIENTS_FILE, mode='a', header=False, index=False)
+        st.rerun()
+    st.table(pd.read_csv(CLIENTS_FILE))
+
+elif menu == "Tableau de bord":
+    st.title("🏠 Accueil")
+    st.write("Bienvenue.")
+
+elif menu == "Scan-Marge":
+    st.title("📸 Scan")
+    st.camera_input("Scanner")
+
+elif menu == "Catalogue":
+    st.title("📚 Catalogue")
+    st.table(pd.read_csv(CATALOGUE_FILE))
+
 
 
 
