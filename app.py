@@ -170,7 +170,16 @@ elif menu == "Archives Devis":
     st.title("🗄️ Archives")
     if os.path.exists(DEVIS_FILE) and os.stat(DEVIS_FILE).st_size > 50:
         df_a = pd.read_csv(DEVIS_FILE)
-        cho
+        choix = st.selectbox("Sélectionner un devis :", df_a["Nom Devis"].unique())
+        st.table(df_a[df_a["Nom Devis"] == choix])
+    else:
+        st.info("Aucune archive disponible.")
+
+# --- PAGE : SCAN-MARGE ---
+elif menu == "Scan-Marge":
+    st.title("📸 Scan-Marge")
+    st.camera_input("Prendre une photo du document")
+
 
 
 
