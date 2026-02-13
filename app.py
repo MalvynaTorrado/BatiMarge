@@ -1,119 +1,116 @@
 import streamlit as st
 import pandas as pd
+import os
 
-# --- 1. CONFIGURATION ET MÉMOIRE ---
-st.set_page_config(page_title="BatiMarge Pro", layout="centered")
+# --- 1. CONFIGURATION ET STOCKAGE ---
+st.set_page_config(page_title="BatiMarge Expert", layout="centered")
 
-# Cette partie crée la mémoire pour stocker tes articles
-if 'mon_devis' not in st.session_state:
-    st.session_state['mon_devis'] = []
+# Fichiers de sauvegarde (pour ne rien perdre)
+CLIENTS_FILE = "clients.csv"
+DEVIS_FILE = "devis_enregistres.csv"
 
-# --- 2. STYLE DESIGN (Finitions) ---
+# Initialisation des fichiers s'ils n'existent pas
+for file in [CLIENTS_FILE, DEVIS_FILE]:
+    if not os.path.exists(file):
+        pd.DataFrame().to_csv(file, index=False)
+
+# Mémoire vive pour la session en cours
+if 'panier' not in st.session_state:
+    st.session_state['panier'] = []
+
+# --- 2. STYLE DESIGN ---
 st.markdown("""
     <style>
     .stApp { background-color: #F8F9FA; }
     .stButton>button {
-        width: 100%; background: linear-gradient(135deg, #FF8C00 0%, #FF4500 100%);
-        color: white; border-radius: 12px; border: none; font-weight: bold; padding: 15px;
+        width: 100%; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white; border-radius: 10px; border: none; font-weight: bold;
     }
-    div[data-testid="metric-container"] {
-        background-color: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    }
+    .main-title { color: #007bff; font-weight: bold; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
 # --- 3. MENU LATÉRAL ---
 with st.sidebar:
     try:
-        st.image("logo.png", width=180)
+        st.image("logo.png", width=150)
     except:
         st.title("🏗️ BatiMarge")
-    
     st.divider()
-    menu = st.radio("MENU PRINCIPAL", [
-        "Tableau de bord", 
-        "Calculateur", 
-        "Consulter mon Devis", 
-        "Scan-Marge"
-    ])
-    st.divider()
-    st.caption("Application Artisan Pro v1.5")
+    menu = st.radio("MENU", ["Clients", "Calculateur", "Mon Devis en cours", "Archives Devis"])
 
 # --- 4. LOGIQUE DES PAGES ---
 
-# --- PAGE : TABLEAU DE BORD ---
-if menu == "Tableau de bord":
-    st.title("Tableau de bord")
-    col1, col2 = st.columns(2)
-    total_articles = len(st.session_state['mon_devis'])
-    total_devis = sum(item['Prix Vente HT'] for item in st.session_state['mon_devis'])
+# --- PAGE : CLIENTS ---
+if menu == "Clients":
+    st.title("👥 Gestion des Clients")
     
-    col1.metric("Articles enregistrés", total_articles)
-    col2.metric("Total Devis HT", f"{total_devis:.2f} €")
-    st.write("Bienvenue sur votre outil de gestion de marge.")
+    with st.expander("➕ Ajouter un nouveau client"):
+        nom = st.text_input("Nom / Entreprise")
+        tel = st.text_input("Téléphone")
+        if st.button("Enregistrer le client"):
+            nouveau_client = pd.DataFrame([{"Nom": nom, "Contact": tel}])
+            nouveau_client.to_csv(CLIENTS_FILE, mode='a', header=False, index=False)
+            st.success("Client enregistré !")
+
+    st.subheader("Liste de vos clients")
+    df_c = pd.read_csv(CLIENTS_FILE)
+    if not df_c.empty:
+        st.table(df_c)
+    else:
+        st.info("Aucun client enregistré.")
 
 # --- PAGE : CALCULATEUR ---
 elif menu == "Calculateur":
-    st.title("📝 Nouveau Calcul")
+    st.title("📝 Chiffrage Article")
+    df_c = pd.read_csv(CLIENTS_FILE)
     
-    with st.container():
-        art = st.text_input("Désignation du matériau (ex: Sac de ciment)")
+    if df_c.empty:
+        st.warning("⚠️ Créez d'abord un client dans l'onglet 'Clients'.")
+    else:
+        client_choisi = st.selectbox("Pour quel client ?", df_c["Nom"])
+        art = st.text_input("Désignation")
         c1, c2 = st.columns(2)
-        p_achat = c1.number_input("Prix Achat HT (€)", min_value=0.0, step=0.1)
-        coeff = c2.number_input("Coefficient de marge", min_value=1.0, value=1.5, step=0.1)
+        p_achat = c1.number_input("Achat HT (€)", min_value=0.0)
+        coeff = c2.number_input("Coeff.", min_value=1.0, value=1.5)
         
         p_vente = p_achat * coeff
-        marge = p_vente - p_achat
+        st.metric("Prix de Vente conseillé", f"{p_vente:.2f} €")
         
-        # Affichage du résultat en grand
-        st.markdown(f"""
-        <div style="background-color:#FFF3E0; padding:20px; border-radius:15px; border-left: 5px solid #FF8C00; margin-bottom:20px;">
-            <p style="margin:0; color:#E65100; font-size:14px;">PRIX DE VENTE CONSEILLÉ</p>
-            <h2 style="margin:0; color:#E65100;">{p_vente:.2f} € HT</h2>
-            <p style="margin:0; color:#555;">Bénéfice : {marge:.2f} €</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        if st.button("💾 ENREGISTRER DANS LE DEVIS"):
-            if art != "":
-                # On ajoute les données dans la mémoire
-                st.session_state['mon_devis'].append({
-                    "Article": art,
-                    "Prix Achat HT": p_achat,
-                    "Coeff": coeff,
-                    "Prix Vente HT": p_vente,
-                    "Marge (€)": marge
-                })
-                st.success(f"L'article '{art}' a été ajouté au devis !")
-            else:
-                st.error("Veuillez entrer un nom pour l'article.")
+        if st.button("Ajouter au devis"):
+            st.session_state['panier'].append({
+                "Client": client_choisi, "Article": art, "Vente HT": p_vente
+            })
+            st.success("Ajouté au panier !")
 
-# --- PAGE : CONSULTER MON DEVIS ---
-elif menu == "Consulter mon Devis":
-    st.title("📂 Récapitulatif du Devis")
-    
-    if len(st.session_state['mon_devis']) > 0:
-        # On transforme la mémoire en tableau
-        df = pd.DataFrame(st.session_state['mon_devis'])
-        st.table(df) # Affichage propre du tableau
+# --- PAGE : MON DEVIS EN COURS ---
+elif menu == "Mon Devis en cours":
+    st.title("📂 Devis Actuel")
+    if st.session_state['panier']:
+        df_p = pd.DataFrame(st.session_state['panier'])
+        st.table(df_p)
         
-        total_ht = df["Prix Vente HT"].sum()
-        total_marge = df["Marge (€)"].sum()
-        
-        st.divider()
-        st.subheader(f"Total Général HT : {total_ht:.2f} €")
-        st.success(f"Marge totale sur ce chantier : {total_marge:.2f} €")
-        
-        if st.button("🗑️ TOUT EFFACER"):
-            st.session_state['mon_devis'] = []
+        nom_devis = st.text_input("Nommer ce devis (ex: Toiture Dumont)")
+        if st.button("💾 SAUVEGARDER ET FERMER LE DEVIS"):
+            df_p["Nom Devis"] = nom_devis
+            df_p.to_csv(DEVIS_FILE, mode='a', header=False, index=False)
+            st.session_state['panier'] = []
+            st.success("Devis archivé avec succès !")
             st.rerun()
     else:
-        st.warning("Votre devis est vide pour le moment.")
+        st.info("Le devis est vide.")
 
-# --- PAGE : SCAN-MARGE ---
-elif menu == "Scan-Marge":
-    st.title("📸 Scanner")
-    st.camera_input("Scanner une étiquette ou un document")
+# --- PAGE : ARCHIVES ---
+elif menu == "Archives Devis":
+    st.title("🗄️ Archives des Devis")
+    if os.path.exists(DEVIS_FILE):
+        df_a = pd.read_csv(DEVIS_FILE, names=["Client", "Article", "Vente HT", "Nom Devis"])
+        if not df_a.empty:
+            selection = st.selectbox("Choisir un devis à ouvrir", df_a["Nom Devis"].unique())
+            st.write(f"Détails pour : **{selection}**")
+            st.table(df_a[df_a["Nom Devis"] == selection])
+        else:
+            st.info("Aucune archive trouvée.")
 
 
 
