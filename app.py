@@ -1,111 +1,117 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
 
 # --- CONFIGURATION DE LA PAGE ---
-st.set_page_config(page_title="BatiMarge - Expert Rentabilité", page_icon="🏗️")
+st.set_page_config(page_title="BatiMarge Pro", layout="centered") # 'centered' fait moins vide sur PC
 
-# --- CHARGEMENT DU LOGO ---
-with st.sidebar:
-    st.image("logo.png", width=200) # Tu peux ajuster la taille ici
-    st.divider()
-    
-# --- STYLE PERSONNALISÉ (Couleurs BatiMarge) ---
+# --- STYLE CSS AVANCÉ (Les finitions) ---
 st.markdown("""
     <style>
-    .main { background-color: #f5f5f5; }
-    .stButton>button { background-color: #FF8C00; color: white; border-radius: 5px; }
-    .stMetric { background-color: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    /* Police et fond */
+    html, body, [class*="css"]  {
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+    .stApp { background-color: #F0F2F6; }
+
+    /* Cartes blanches élégantes */
+    div[data-testid="metric-container"] {
+        background-color: white;
+        padding: 25px;
+        border-radius: 20px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        border: none;
+        text-align: center;
+    }
+    
+    /* Titres plus modernes */
+    h1 { color: #1E1E1E; font-weight: 800 !important; }
+    
+    /* Bouton d'action arrondi et coloré */
+    .stButton>button {
+        width: 100%;
+        background: linear-gradient(135deg, #FF8C00 0%, #FF4500 100%);
+        color: white;
+        border-radius: 12px;
+        border: none;
+        padding: 15px;
+        font-size: 18px;
+        font-weight: bold;
+        transition: 0.3s;
+        box-shadow: 0 4px 15px rgba(255, 140, 0, 0.3);
+    }
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(255, 140, 0, 0.4);
+    }
+
+    /* Input (cases de saisie) plus douces */
+    .stTextInput>div>div>input, .stNumberInput>div>div>input {
+        border-radius: 10px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- TITRE ET LOGO ---
-st.title("🏗️ BatiMarge")
-st.caption("L'assistant qui sécurise vos chantiers et vos bénéfices.")
-
-# --- NAVIGATION ---
-menu = ["Tableau de bord", "Nouveau Devis", "Scan-Marge", "Mon Catalogue"]
-choice = st.sidebar.selectbox("Menu", menu)
-
-# --- INITIALISATION DES DONNÉES (Session State) ---
-if 'devis_items' not in st.session_state:
-    st.session_state.devis_items = []
-
-# --- 1. TABLEAU DE BORD ---
-if choice == "Tableau de bord":
-    st.header("Statistiques du mois")
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Devis envoyés", "12")
-    col2.metric("Chiffre d'Affaires", "14 500 €")
-    col3.metric("Marge moyenne", "32%", "+2%")
+# --- BARRE LATÉRALE ---
+with st.sidebar:
+    try:
+        st.image("logo.png", width=180)
+    except:
+        st.title("🏗️ BatiMarge")
     
-    st.info("💡 Conseil BatiMarge : Le prix du cuivre a augmenté de 5%. Pensez à ajuster vos devis d'électricité.")
+    st.markdown("---")
+    menu = st.radio("MENU PRINCIPAL", ["Tableau de bord", "Calculateur Devis", "Scan-Marge"])
+    st.markdown("---")
+    st.caption("Version 1.2 Pro")
 
-# --- 2. NOUVEAU DEVIS ---
-elif choice == "Nouveau Devis":
-    st.header("Créer un devis")
+# --- TABLEAU DE BORD ---
+if menu == "Tableau de bord":
+    st.title("Tableau de bord")
+    st.write("Suivi de votre rentabilité en temps réel.")
+    
+    m1, m2 = st.columns(2)
+    with m1:
+        st.metric("Chantiers en cours", "8")
+    with m2:
+        st.metric("Marge globale", "32.5%")
+    
+    st.markdown("### Dernières opérations")
+    # Simulation d'un petit tableau propre
+    data = {"Client": ["Dumont", "SARL Batir", "Leclerc"], "Marge (€)": [450, 1200, 890]}
+    st.table(pd.DataFrame(data))
+
+# --- CALCULATEUR ---
+elif menu == "Calculateur Devis":
+    st.title("📝 Nouveau Calcul")
     
     with st.expander("👤 Informations Client", expanded=True):
-        nom_client = st.text_input("Nom du client")
-        adresse = st.text_area("Adresse du chantier")
+        col1, col2 = st.columns(2)
+        client = col1.text_input("Nom du client")
+        chantier = col2.text_input("Référence chantier")
 
     with st.container():
-        st.subheader("📦 Articles")
-        nom_art = st.text_input("Désignation de l'article")
-        col_p1, col_p2, col_p3 = st.columns(3)
+        st.markdown("### Détail du produit")
+        c1, c2, c3 = st.columns([2, 1, 1])
+        article = c1.text_input("Matériau / Article")
+        p_achat = c2.number_input("Achat HT", min_value=0.0)
+        coeff = c3.number_input("Coeff.", min_value=1.0, value=1.5, step=0.1)
         
-        prix_achat = col_p1.number_input("Prix Achat HT (€)", min_value=0.0, step=0.1)
-        coeff = col_p2.number_input("Coeff. Marge", min_value=1.0, value=1.5, step=0.1)
-        quantite = col_p3.number_input("Quantité", min_value=1, value=1)
+        p_vente = p_achat * coeff
+        marge = p_vente - p_achat
         
-        prix_vente_unit = prix_achat * coeff
+        st.markdown(f"""
+        <div style="background-color:#FFF3E0; padding:20px; border-radius:15px; border-left: 5px solid #FF8C00;">
+            <p style="margin:0; color:#E65100; font-size:14px;">PRIX DE VENTE CONSEILLÉ</p>
+            <h2 style="margin:0; color:#E65100;">{p_vente:.2f} € HT</h2>
+            <p style="margin:0; color:#555;">Bénéfice net : {marge:.2f} €</p>
+        </div>
+        """, unsafe_allow_html=True)
         
-        if st.button("➕ Ajouter l'article"):
-            item = {
-                "Désignation": nom_art,
-                "Quantité": quantite,
-                "Prix Achat HT": prix_achat,
-                "Prix Vente HT": prix_vente_unit,
-                "Total HT": prix_vente_unit * quantite
-            }
-            st.session_state.devis_items.append(item)
-            st.success("Article ajouté !")
+        st.write("") # Espace
+        if st.button("ENREGISTRER L'ARTICLE"):
+            st.success("Ajouté avec succès au devis !")
 
-    # Affichage du tableau du devis
-    if st.session_state.devis_items:
-        df = pd.DataFrame(st.session_state.devis_items)
-        st.table(df[["Désignation", "Quantité", "Prix Vente HT", "Total HT"]])
-        
-        total_devis = df["Total HT"].sum()
-        st.subheader(f"Total Devis : {total_devis:,.2f} € HT")
-        
-        if st.button("💾 Générer le PDF (Simulé)"):
-            st.balloons()
-            st.success(f"Devis pour {nom_client} prêt à être envoyé !")
-
-# --- 3. SCAN-MARGE (Killer Feature) ---
-elif choice == "Scan-Marge":
-    st.header("📸 Scan-Marge")
-    st.write("Scannez le code-barres d'un produit pour l'ajouter avec votre marge.")
-    
-    img_file = st.camera_input("Prise de vue du code-barres")
-    
-    if img_file:
-        st.warning("Recherche du produit dans la base de données...")
-        # Simulation de détection
-        st.success("Produit détecté : Sac de Ciment 35kg")
-        p_achat_simule = 8.50
-        st.write(f"Prix d'achat constaté : **{p_achat_simule} € HT**")
-        
-        marge_pref = st.slider("Ajuster la marge pour ce produit", 1.0, 3.0, 1.8)
-        st.info(f"Prix de vente suggéré : **{(p_achat_simule * marge_pref):.2f} € HT**")
-        
-        if st.button("Ajouter ce prix au devis"):
-             st.success("Ciment ajouté au devis en cours.")
-
-# --- 4. CATALOGUE ---
-elif choice == "Mon Catalogue":
-    st.header("🗂️ Mes Tarifs Matériaux")
-    st.write("Importez ou modifiez votre liste de prix fournisseurs.")
-
-    uploaded_file = st.file_view = st.file_uploader("Importer un fichier Excel/CSV", type=["csv", "xlsx"])
+# --- SCANNER ---
+elif menu == "Scan-Marge":
+    st.title("📸 Scanner")
+    st.write("Prenez une photo d'une étiquette ou d'un devis fournisseur.")
+    st.camera_input("Capturez le document")
