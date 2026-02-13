@@ -5,6 +5,11 @@ from datetime import datetime
 # --- CONFIGURATION DE LA PAGE ---
 st.set_page_config(page_title="BatiMarge - Expert Rentabilité", page_icon="🏗️")
 
+# --- CHARGEMENT DU LOGO ---
+with st.sidebar:
+    st.image("logo.png", width=200) # Tu peux ajuster la taille ici
+    st.divider()
+    
 # --- STYLE PERSONNALISÉ (Couleurs BatiMarge) ---
 st.markdown("""
     <style>
@@ -102,4 +107,5 @@ elif choice == "Scan-Marge":
 elif choice == "Mon Catalogue":
     st.header("🗂️ Mes Tarifs Matériaux")
     st.write("Importez ou modifiez votre liste de prix fournisseurs.")
+
     uploaded_file = st.file_view = st.file_uploader("Importer un fichier Excel/CSV", type=["csv", "xlsx"])
