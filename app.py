@@ -1,9 +1,3 @@
-import streamlit as st
-import sqlite3
-import pandas as pd
-from datetime import datetime
-import streamlit as st
-import pandas as pdimport streamlit as st
 
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -136,6 +130,7 @@ conn = sqlite3.connect('artisan.db')
 historique_df = pd.read_sql_query("SELECT * FROM devis ORDER BY id DESC", conn)
 st.dataframe(historique_df, use_container_width=True)
 conn.close()
+
 
 
 
