@@ -133,6 +133,37 @@ mes_travaux = [
 # Paramètres : Client, Travaux, Marge (15%), Taux horaire (50€/h), TVA (10% pour rénovation)
 creer_pdf_devis("M. Martin", mes_travaux, 15, 50, 10)
 
+import sqlite3
+from datetime import datetime
+
+def initialiser_bdd():
+    conn = sqlite3.connect('artisan.db')
+    cursor = conn.cursor()
+    # Table des devis
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS devis (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_nom TEXT,
+            date_creation TEXT,
+            total_ht REAL,
+            total_ttc REAL,
+            marge_appliquee REAL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def sauvegarder_devis_bdd(client, total_ht, total_ttc, marge):
+    conn = sqlite3.connect('artisan.db')
+    cursor = conn.cursor()
+    date_jour = datetime.now().strftime("%d/%m/%Y %H:%M")
+    cursor.execute('''
+        INSERT INTO devis (client_nom, date_creation, total_ht, total_ttc, marge_appliquee)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (client, date_jour, total_ht, total_ttc, marge))
+    conn.commit()
+    conn.close()
+    print(f"✅ Devis pour {client} enregistré en base de données.")
 
 
 
