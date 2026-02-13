@@ -115,3 +115,46 @@ elif menu == "Scan-Marge":
     st.title("📸 Scanner")
     st.write("Prenez une photo d'une étiquette ou d'un devis fournisseur.")
     st.camera_input("Capturez le document")
+
+import streamlit as st
+from streamlit_drawable_canvas import st_canvas
+from PIL import Image
+import numpy as np
+
+def module_signature(nom_client):
+    st.subheader("✍️ Validation et Signature")
+    st.write(f"Signature demandée pour accord du devis par : **{nom_client}**")
+    
+    # Création de la zone de dessin (Canvas)
+    canvas_result = st_canvas(
+        fill_color="rgba(255, 255, 255, 1)",  # Fond blanc
+        stroke_width=3,                       # Épaisseur du trait
+        stroke_color="#000000",               # Couleur de l'encre (Noir)
+        background_color="#F0F2F6",           # Couleur de fond du cadre (Gris clair)
+        height=200,                           # Hauteur adaptée aux mobiles
+        width=350,                            # Largeur adaptée aux mobiles
+        drawing_mode="freedraw",              # Mode dessin libre
+        key="canvas_signature",
+    )
+
+    # Si le client a dessiné quelque chose et clique sur "Valider"
+    if canvas_result.image_data is not None:
+        if st.button("✅ Confirmer la commande"):
+            # L'image est un tableau mathématique (numpy array), on la convertit en vraie image
+            img_data = canvas_result.image_data.astype(np.uint8)
+            image_signature = Image.fromarray(img_data, 'RGBA')
+            
+            # Sauvegarde de la signature sous forme de fichier image
+            chemin_signature = f"signature_{nom_client.replace(' ', '_')}.png"
+            image_signature.save(chemin_signature)
+            
+            st.success("Devis signé et validé avec succès ! 🎉")
+            st.balloons() # Petite animation sympa pour fêter la vente
+            
+            return chemin_signature
+            
+    return None
+
+# --- TEST DANS L'APPLICATION ---
+# chemin_fichier = module_signature("M. Dupont")
+
