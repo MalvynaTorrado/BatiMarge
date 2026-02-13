@@ -1,165 +1,119 @@
 import streamlit as st
 import pandas as pd
 
-# --- MÉMOIRE DU DEVIS ---
+# --- 1. CONFIGURATION ET MÉMOIRE ---
+st.set_page_config(page_title="BatiMarge Pro", layout="centered")
+
+# Cette partie crée la mémoire pour stocker tes articles
 if 'mon_devis' not in st.session_state:
     st.session_state['mon_devis'] = []
-    
-# --- CONFIGURATION DE LA PAGE ---
-st.set_page_config(page_title="BatiMarge Pro", layout="centered") # 'centered' fait moins vide sur PC
 
-# --- STYLE CSS AVANCÉ (Les finitions) ---
+# --- 2. STYLE DESIGN (Finitions) ---
 st.markdown("""
     <style>
-    /* Police et fond */
-    html, body, [class*="css"]  {
-        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    }
-    .stApp { background-color: #F0F2F6; }
-
-    /* Cartes blanches élégantes */
-    div[data-testid="metric-container"] {
-        background-color: white;
-        padding: 25px;
-        border-radius: 20px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-        border: none;
-        text-align: center;
-    }
-    
-    /* Titres plus modernes */
-    h1 { color: #1E1E1E; font-weight: 800 !important; }
-    
-    /* Bouton d'action arrondi et coloré */
+    .stApp { background-color: #F8F9FA; }
     .stButton>button {
-        width: 100%;
-        background: linear-gradient(135deg, #FF8C00 0%, #FF4500 100%);
-        color: white;
-        border-radius: 12px;
-        border: none;
-        padding: 15px;
-        font-size: 18px;
-        font-weight: bold;
-        transition: 0.3s;
-        box-shadow: 0 4px 15px rgba(255, 140, 0, 0.3);
+        width: 100%; background: linear-gradient(135deg, #FF8C00 0%, #FF4500 100%);
+        color: white; border-radius: 12px; border: none; font-weight: bold; padding: 15px;
     }
-    .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(255, 140, 0, 0.4);
-    }
-
-    /* Input (cases de saisie) plus douces */
-    .stTextInput>div>div>input, .stNumberInput>div>div>input {
-        border-radius: 10px;
+    div[data-testid="metric-container"] {
+        background-color: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- BARRE LATÉRALE ---
+# --- 3. MENU LATÉRAL ---
 with st.sidebar:
     try:
         st.image("logo.png", width=180)
     except:
         st.title("🏗️ BatiMarge")
     
-    st.markdown("---")
-    menu = st.radio("MENU PRINCIPAL", ["Tableau de bord", "Calculateur Devis", "Scan-Marge"])
-    st.markdown("---")
-    st.caption("Version 1.2 Pro")
+    st.divider()
+    menu = st.radio("MENU PRINCIPAL", [
+        "Tableau de bord", 
+        "Calculateur", 
+        "Consulter mon Devis", 
+        "Scan-Marge"
+    ])
+    st.divider()
+    st.caption("Application Artisan Pro v1.5")
 
-# --- TABLEAU DE BORD ---
+# --- 4. LOGIQUE DES PAGES ---
+
+# --- PAGE : TABLEAU DE BORD ---
 if menu == "Tableau de bord":
     st.title("Tableau de bord")
-    st.write("Suivi de votre rentabilité en temps réel.")
+    col1, col2 = st.columns(2)
+    total_articles = len(st.session_state['mon_devis'])
+    total_devis = sum(item['Prix Vente HT'] for item in st.session_state['mon_devis'])
     
-    m1, m2 = st.columns(2)
-    with m1:
-        st.metric("Chantiers en cours", "8")
-    with m2:
-        st.metric("Marge globale", "32.5%")
-    
-    st.markdown("### Dernières opérations")
-    # Simulation d'un petit tableau propre
-    data = {"Client": ["Dumont", "SARL Batir", "Leclerc"], "Marge (€)": [450, 1200, 890]}
-    st.table(pd.DataFrame(data))
+    col1.metric("Articles enregistrés", total_articles)
+    col2.metric("Total Devis HT", f"{total_devis:.2f} €")
+    st.write("Bienvenue sur votre outil de gestion de marge.")
 
-# --- CALCULATEUR ---
-elif menu == "Calculateur Devis":
+# --- PAGE : CALCULATEUR ---
+elif menu == "Calculateur":
     st.title("📝 Nouveau Calcul")
     
-    with st.expander("👤 Informations Client", expanded=True):
-        col1, col2 = st.columns(2)
-        client = col1.text_input("Nom du client")
-        chantier = col2.text_input("Référence chantier")
-
     with st.container():
-        st.markdown("### Détail du produit")
-        c1, c2, c3 = st.columns([2, 1, 1])
-        article = c1.text_input("Matériau / Article")
-        p_achat = c2.number_input("Achat HT", min_value=0.0)
-        coeff = c3.number_input("Coeff.", min_value=1.0, value=1.5, step=0.1)
+        art = st.text_input("Désignation du matériau (ex: Sac de ciment)")
+        c1, c2 = st.columns(2)
+        p_achat = c1.number_input("Prix Achat HT (€)", min_value=0.0, step=0.1)
+        coeff = c2.number_input("Coefficient de marge", min_value=1.0, value=1.5, step=0.1)
         
         p_vente = p_achat * coeff
         marge = p_vente - p_achat
         
+        # Affichage du résultat en grand
         st.markdown(f"""
-        <div style="background-color:#FFF3E0; padding:20px; border-radius:15px; border-left: 5px solid #FF8C00;">
+        <div style="background-color:#FFF3E0; padding:20px; border-radius:15px; border-left: 5px solid #FF8C00; margin-bottom:20px;">
             <p style="margin:0; color:#E65100; font-size:14px;">PRIX DE VENTE CONSEILLÉ</p>
             <h2 style="margin:0; color:#E65100;">{p_vente:.2f} € HT</h2>
-            <p style="margin:0; color:#555;">Bénéfice net : {marge:.2f} €</p>
+            <p style="margin:0; color:#555;">Bénéfice : {marge:.2f} €</p>
         </div>
         """, unsafe_allow_html=True)
         
-        st.write("") # Espace
-        if st.button("ENREGISTRER L'ARTICLE"):
-            st.success("Ajouté avec succès au devis !")
+        if st.button("💾 ENREGISTRER DANS LE DEVIS"):
+            if art != "":
+                # On ajoute les données dans la mémoire
+                st.session_state['mon_devis'].append({
+                    "Article": art,
+                    "Prix Achat HT": p_achat,
+                    "Coeff": coeff,
+                    "Prix Vente HT": p_vente,
+                    "Marge (€)": marge
+                })
+                st.success(f"L'article '{art}' a été ajouté au devis !")
+            else:
+                st.error("Veuillez entrer un nom pour l'article.")
 
-# --- SCANNER ---
+# --- PAGE : CONSULTER MON DEVIS ---
+elif menu == "Consulter mon Devis":
+    st.title("📂 Récapitulatif du Devis")
+    
+    if len(st.session_state['mon_devis']) > 0:
+        # On transforme la mémoire en tableau
+        df = pd.DataFrame(st.session_state['mon_devis'])
+        st.table(df) # Affichage propre du tableau
+        
+        total_ht = df["Prix Vente HT"].sum()
+        total_marge = df["Marge (€)"].sum()
+        
+        st.divider()
+        st.subheader(f"Total Général HT : {total_ht:.2f} €")
+        st.success(f"Marge totale sur ce chantier : {total_marge:.2f} €")
+        
+        if st.button("🗑️ TOUT EFFACER"):
+            st.session_state['mon_devis'] = []
+            st.rerun()
+    else:
+        st.warning("Votre devis est vide pour le moment.")
+
+# --- PAGE : SCAN-MARGE ---
 elif menu == "Scan-Marge":
     st.title("📸 Scanner")
-    st.write("Prenez une photo d'une étiquette ou d'un devis fournisseur.")
-    st.camera_input("Capturez le document")
+    st.camera_input("Scanner une étiquette ou un document")
 
-import streamlit as st
-from streamlit_drawable_canvas import st_canvas
-from PIL import Image
-import numpy as np
-
-def module_signature(nom_client):
-    st.subheader("✍️ Validation et Signature")
-    st.write(f"Signature demandée pour accord du devis par : **{nom_client}**")
-    
-    # Création de la zone de dessin (Canvas)
-    canvas_result = st_canvas(
-        fill_color="rgba(255, 255, 255, 1)",  # Fond blanc
-        stroke_width=3,                       # Épaisseur du trait
-        stroke_color="#000000",               # Couleur de l'encre (Noir)
-        background_color="#F0F2F6",           # Couleur de fond du cadre (Gris clair)
-        height=200,                           # Hauteur adaptée aux mobiles
-        width=350,                            # Largeur adaptée aux mobiles
-        drawing_mode="freedraw",              # Mode dessin libre
-        key="canvas_signature",
-    )
-
-    # Si le client a dessiné quelque chose et clique sur "Valider"
-    if canvas_result.image_data is not None:
-        if st.button("✅ Confirmer la commande"):
-            # L'image est un tableau mathématique (numpy array), on la convertit en vraie image
-            img_data = canvas_result.image_data.astype(np.uint8)
-            image_signature = Image.fromarray(img_data, 'RGBA')
-            
-            # Sauvegarde de la signature sous forme de fichier image
-            chemin_signature = f"signature_{nom_client.replace(' ', '_')}.png"
-            image_signature.save(chemin_signature)
-            
-            st.success("Devis signé et validé avec succès ! 🎉")
-            st.balloons() # Petite animation sympa pour fêter la vente
-            
-            return chemin_signature
-            
-    return None
-
-# --- TEST DANS L'APPLICATION ---
-# chemin_fichier = module_signature("M. Dupont")
 
 
