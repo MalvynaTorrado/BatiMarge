@@ -1,113 +1,177 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+import os
 
-# --- CONFIGURATION DE LA PAGE ---
-st.set_page_config(page_title="BatiMarge - Expert Rentabilité", page_icon="🏗️")
+# --- 1. CONFIGURATION DE LA PAGE ---
+st.set_page_config(page_title="BatiMarge Pro", layout="centered")
 
-# --- CHARGEMENT DU LOGO ---
-with st.sidebar:
-    st.image("logo.png", width=200) # Tu peux ajuster la taille ici
-    st.divider()
+# --- 2. INITIALISATION DES FICHIERS DE DONNÉES ---
+CLIENTS_FILE = "clients.csv"
+DEVIS_FILE = "devis_archives.csv"
+CATALOGUE_FILE = "catalogue.csv"
 
-# --- STYLE PERSONNALISÉ (Couleurs BatiMarge) ---
+def initialiser_fichiers():
+    if not os.path.exists(CLIENTS_FILE) or os.stat(CLIENTS_FILE).st_size == 0:
+        pd.DataFrame(columns=["Nom", "Contact"]).to_csv(CLIENTS_FILE, index=False)
+    if not os.path.exists(DEVIS_FILE) or os.stat(DEVIS_FILE).st_size == 0:
+        pd.DataFrame(columns=["Client", "Article", "Vente HT", "Marge", "Nom Devis"]).to_csv(DEVIS_FILE, index=False)
+    if not os.path.exists(CATALOGUE_FILE) or os.stat(CATALOGUE_FILE).st_size == 0:
+        pd.DataFrame(columns=["Article", "Prix Achat HT"]).to_csv(CATALOGUE_FILE, index=False)
+
+initialiser_fichiers()
+
+if 'panier' not in st.session_state:
+    st.session_state['panier'] = []
+
+# --- 3. STYLE PERSONNALISÉ (DESIGN) ---
 st.markdown("""
     <style>
-    .main { background-color: #f5f5f5; }
-    .stButton>button { background-color: #FF8C00; color: white; border-radius: 5px; }
-    .stMetric { background-color: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .stApp { background-color: #F8F9FA; }
+    [data-testid="stMetricValue"] { color: #FF8C00 !important; font-weight: bold; }
+    div[data-testid="metric-container"] {
+        background-color: white; padding: 20px; border-radius: 15px; 
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #EEE;
+    }
+    .stButton>button {
+        width: 100%; background: linear-gradient(135deg, #FF8C00 0%, #FF4500 100%);
+        color: white; border-radius: 12px; height: 3em; font-weight: bold; border: none;
+    }
+    .result-box {
+        background-color:#FFF3E0; padding:20px; border-radius:15px; 
+        border-left: 5px solid #FF8C00; margin-bottom:20px; text-align: center;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- TITRE ET LOGO ---
-st.title("🏗️ BatiMarge")
-st.caption("L'assistant qui sécurise vos chantiers et vos bénéfices.")
+# --- 4. NAVIGATION & CHARGEMENT DU LOGO ---
+with st.sidebar:
+    # --- BLOC CHARGEMENT DU LOGO ---
+    try:
+        if os.path.exists("logo.png"):
+            st.image("logo.png", width=200)
+        else:
+            st.warning("Fichier 'logo.png' non trouvé sur GitHub")
+    except Exception as e:
+        st.error(f"Erreur logo : {e}")
+    
+    st.title("🏗️ BatiMarge")
+    st.subheader("Expert Rentabilité")
+    st.divider()
+    
+    menu = st.radio("Aller vers :", [
+        "Tableau de bord", 
+        "Fiches Clients",
+        "Catalogue Matériaux",
+        "Nouveau Devis", 
+        "Archives Devis",
+        "Scan-Marge"
+    ])
+    st.divider()
+    st.caption("Version Pro 3.5")
 
-# --- NAVIGATION ---
-menu = ["Tableau de bord", "Nouveau Devis", "Scan-Marge", "Mon Catalogue"]
-choice = st.sidebar.selectbox("Menu", menu)
+# --- 5. LOGIQUE DES PAGES ---
 
-# --- INITIALISATION DES DONNÉES (Session State) ---
-if 'devis_items' not in st.session_state:
-    st.session_state.devis_items = []
-
-# --- 1. TABLEAU DE BORD ---
-if choice == "Tableau de bord":
-    st.header("Statistiques du mois")
+# --- PAGE : TABLEAU DE BORD ---
+if menu == "Tableau de bord":
+    st.title("Bonjour, Constructeur 👋")
     col1, col2, col3 = st.columns(3)
-    col1.metric("Devis envoyés", "12")
-    col2.metric("Chiffre d'Affaires", "14 500 €")
-    col3.metric("Marge moyenne", "32%", "+2%")
+    df_c = pd.read_csv(CLIENTS_FILE)
+    df_cat = pd.read_csv(CATALOGUE_FILE)
     
-    st.info("💡 Conseil BatiMarge : Le prix du cuivre a augmenté de 5%. Pensez à ajuster vos devis d'électricité.")
+    with col1:
+        st.metric("Clients", len(df_c))
+    with col2:
+        st.metric("Catalogue", len(df_cat))
+    with col3:
+        st.metric("Articles Panier", len(st.session_state['panier']))
 
-# --- 2. NOUVEAU DEVIS ---
-elif choice == "Nouveau Devis":
-    st.header("Créer un devis")
+# --- PAGE : FICHES CLIENTS ---
+elif menu == "Fiches Clients":
+    st.title("👥 Gestion des Clients")
+    with st.expander("➕ Créer un nouveau client"):
+        n_nom = st.text_input("Nom / Entreprise")
+        n_tel = st.text_input("Téléphone")
+        if st.button("Enregistrer le client"):
+            if n_nom:
+                pd.DataFrame([{"Nom": n_nom, "Contact": n_tel}]).to_csv(CLIENTS_FILE, mode='a', header=False, index=False)
+                st.success("Client ajouté !")
+                st.rerun()
+
+    df_c = pd.read_csv(CLIENTS_FILE)
+    st.table(df_c)
+
+# --- PAGE : CATALOGUE ---
+elif menu == "Catalogue Matériaux":
+    st.title("📚 Catalogue Matériaux")
+    with st.expander("➕ Ajouter un article au catalogue"):
+        c_art = st.text_input("Nom du matériau")
+        c_prix = st.number_input("Prix Achat HT habituel (€)", min_value=0.0)
+        if st.button("Ajouter au catalogue"):
+            if c_art:
+                pd.DataFrame([{"Article": c_art, "Prix Achat HT": c_prix}]).to_csv(CATALOGUE_FILE, mode='a', header=False, index=False)
+                st.success("Article enregistré !")
+                st.rerun()
     
-    with st.expander("👤 Informations Client", expanded=True):
-        nom_client = st.text_input("Nom du client")
-        adresse = st.text_area("Adresse du chantier")
+    df_cat = pd.read_csv(CATALOGUE_FILE)
+    st.dataframe(df_cat, use_container_width=True)
 
-    with st.container():
-        st.subheader("📦 Articles")
-        nom_art = st.text_input("Désignation de l'article")
-        col_p1, col_p2, col_p3 = st.columns(3)
-        
-        prix_achat = col_p1.number_input("Prix Achat HT (€)", min_value=0.0, step=0.1)
-        coeff = col_p2.number_input("Coeff. Marge", min_value=1.0, value=1.5, step=0.1)
-        quantite = col_p3.number_input("Quantité", min_value=1, value=1)
-        
-        prix_vente_unit = prix_achat * coeff
-        
-        if st.button("➕ Ajouter l'article"):
-            item = {
-                "Désignation": nom_art,
-                "Quantité": quantite,
-                "Prix Achat HT": prix_achat,
-                "Prix Vente HT": prix_vente_unit,
-                "Total HT": prix_vente_unit * quantite
-            }
-            st.session_state.devis_items.append(item)
-            st.success("Article ajouté !")
-
-    # Affichage du tableau du devis
-    if st.session_state.devis_items:
-        df = pd.DataFrame(st.session_state.devis_items)
-        st.table(df[["Désignation", "Quantité", "Prix Vente HT", "Total HT"]])
-        
-        total_devis = df["Total HT"].sum()
-        st.subheader(f"Total Devis : {total_devis:,.2f} € HT")
-        
-        if st.button("💾 Générer le PDF (Simulé)"):
-            st.balloons()
-            st.success(f"Devis pour {nom_client} prêt à être envoyé !")
-
-# --- 3. SCAN-MARGE (Killer Feature) ---
-elif choice == "Scan-Marge":
-    st.header("📸 Scan-Marge")
-    st.write("Scannez le code-barres d'un produit pour l'ajouter avec votre marge.")
+# --- PAGE : NOUVEAU DEVIS ---
+elif menu == "Nouveau Devis":
+    st.title("📝 Nouveau Devis")
+    df_c = pd.read_csv(CLIENTS_FILE)
+    df_cat = pd.read_csv(CATALOGUE_FILE)
     
-    img_file = st.camera_input("Prise de vue du code-barres")
-    
-    if img_file:
-        st.warning("Recherche du produit dans la base de données...")
-        # Simulation de détection
-        st.success("Produit détecté : Sac de Ciment 35kg")
-        p_achat_simule = 8.50
-        st.write(f"Prix d'achat constaté : **{p_achat_simule} € HT**")
+    if df_c.empty:
+        st.warning("⚠️ Créez un client d'abord dans 'Fiches Clients'.")
+    else:
+        client_choisi = st.selectbox("Client :", df_c["Nom"].unique())
         
-        marge_pref = st.slider("Ajuster la marge pour ce produit", 1.0, 3.0, 1.8)
-        st.info(f"Prix de vente suggéré : **{(p_achat_simule * marge_pref):.2f} € HT**")
+        st.subheader("Choix de l'article")
+        source = st.radio("Source :", ["Depuis le catalogue", "Saisie manuelle"])
         
-        if st.button("Ajouter ce prix au devis"):
-             st.success("Ciment ajouté au devis en cours.")
+        if source == "Depuis le catalogue" and not df_cat.empty:
+            art_obj = st.selectbox("Sélectionner l'article :", df_cat["Article"].unique())
+            prix_base = df_cat[df_cat["Article"] == art_obj]["Prix Achat HT"].values[0]
+            art_nom = art_obj
+        else:
+            art_nom = st.text_input("Nom de l'article")
+            prix_base = st.number_input("Prix Achat HT (€)", min_value=0.0)
 
-# --- 4. CATALOGUE ---
-elif choice == "Mon Catalogue":
-    st.header("🗂️ Mes Tarifs Matériaux")
-    st.write("Importez ou modifiez votre liste de prix fournisseurs.")
-    uploaded_file = st.file_view = st.file_uploader("Importer un fichier Excel/CSV", type=["csv", "xlsx"])
+        coeff = st.number_input("Coeff. Marge", min_value=1.0, value=1.5, step=0.1)
+        p_vente = prix_base * coeff
+        
+        st.markdown(f"""<div class="result-box"><p>PRIX DE VENTE CONSEILLÉ</p><h2>{p_vente:.2f} € HT</h2></div>""", unsafe_allow_html=True)
+        
+        if st.button("🛒 AJOUTER AU DEVIS"):
+            if art_nom:
+                st.session_state['panier'].append({"Client": client_choisi, "Article": art_nom, "Vente HT": p_vente, "Marge": p_vente - prix_base})
+                st.success("Ajouté au panier !")
+            else:
+                st.error("Précisez le nom de l'article.")
+
+        if st.session_state['panier']:
+            st.divider()
+            st.write("### Récapitulatif du panier")
+            st.table(pd.DataFrame(st.session_state['panier']))
+            nom_devis_final = st.text_input("Nom du devis (ex: Toiture Dupont) :")
+            if st.button("💾 ARCHIVER LE DEVIS"):
+                if nom_devis_final:
+                    df_save = pd.DataFrame(st.session_state['panier'])
+                    df_save["Nom Devis"] = nom_devis_final
+                    df_save.to_csv(DEVIS_FILE, mode='a', header=False, index=False)
+                    st.session_state['panier'] = []
+                    st.success("Devis sauvegardé !")
+                    st.rerun()
+                else:
+                    st.error("Donnez un nom au devis.")
+
+# --- PAGE : ARCHIVES ---
+elif menu == "Archives Devis":
+    st.title("🗄️ Archives")
+    if os.path.exists(DEVIS_FILE) and os.stat(DEVIS_FILE).st_size > 50:
+        df_a = pd.read_csv(DEVIS_FILE)
+        cho
+
 
 
 
