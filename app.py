@@ -2,7 +2,23 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime
+import streamlit as st
+import pandas as pd
 
+# "https://docs.google.com/spreadsheets/d/e/2PACX-1vQSQjxU9E4qrkgukQutzuHtuIUcEhAjEUitVoe8eK96uRV7z4YiPzIfHqYyX586wNvfsbhF0x8o-MYf/pubhtml"
+
+# Fonction pour charger les données avec mise à jour automatique
+@st.cache_data(ttl=600) # Rafraîchit les données toutes les 10 minutes
+def load_data():
+    return pd.read_csv(SHEET_URL)
+
+try:
+    df_materiaux = load_data()
+    st.sidebar.success("✅ Prix du marché mis à jour")
+except:
+    st.sidebar.error("⚠️ Erreur de connexion aux prix")
+    # Backup au cas où la connexion échoue
+    df_materiaux = pd.DataFrame({"Matériau": ["Exemple"], "Prix Unitaire HT": [0.0], "Unité": ["-"]})
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="BatiMarge Pro", layout="centered")
 
@@ -172,6 +188,7 @@ if st.button("💾 Finaliser et Télécharger le PDF"):
         file_name="devis_artisan.pdf",
         mime="application/pdf"
     )
+
 
 
 
