@@ -1,1 +1,3 @@
 secrets.toml
+# Contenu de secrets.toml
+password = "ton_mot_de_passe_artisan"
