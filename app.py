@@ -188,6 +188,24 @@ if st.button("💾 Finaliser et Télécharger le PDF"):
         file_name="devis_artisan.pdf",
         mime="application/pdf"
     )
+# Choix du taux de TVA
+st.header("3. Paramètres fiscaux")
+type_travaux = st.selectbox(
+    "Type de travaux :",
+    ["Rénovation énergétique (5.5%)", "Rénovation classique (10%)", "Neuf / Divers (20%)"]
+)
+
+# Dictionnaire de correspondance
+tva_map = {"Rénovation énergétique (5.5%)": 0.055, "Rénovation classique (10%)": 0.1, "Neuf / Divers (20%)": 0.2}
+taux_tva = tva_map[type_travaux]
+
+# Calculs finaux mis à jour
+montant_tva = total_final_ht * taux_tva
+total_ttc = total_final_ht + montant_tva
+
+st.metric("Total HT", f"{total_final_ht:.2f} €")
+st.metric(f"TVA ({taux_tva*100}%)", f"{montant_tva:.2f} €")
+st.success(f"### TOTAL TTC : {total_ttc:.2f} €")
 
 
 
