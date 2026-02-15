@@ -1,42 +1,68 @@
 import streamlit as st
-import pandas as pd
-import os
-from datetime import datetime
-import streamlit as st
-import pandas as pd
-import streamlit as st
-import streamlit_authenticator as stauth
-import yaml
-from yaml.loader import SafeLoader
-import streamlit as st
-import streamlit_authenticator as stauth
-import streamlit as st
 import streamlit_authenticator as stauth
 import pandas as pd
+from fpdf import FPDF
+from streamlit_drawable_canvas import st_canvas
 
-# --- 1. CONFIGURATION DES UTILISATEURS ---
-# On définit l'artisan ici directement
+# --- CONFIGURATION DE LA PAGE ---
+st.set_page_config(page_title="BatiMarge Pro", page_icon="🏗️", layout="centered")
+
+# --- 1. FONCTION GÉNÉRATION PDF (MISE À JOUR) ---
+def generer_pdf(liste_materiaux, total_ht, tva_taux, user_info):
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # En-tête Artisan
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 8, user_info['entreprise'], ln=True)
+    pdf.set_font("Arial", '', 10)
+    pdf.cell(0, 5, f"SIRET: {user_info['siret']}", ln=True)
+    pdf.cell(0, 5, user_info['adresse'], ln=True)
+    pdf.ln(10)
+
+    # Titre
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(0, 10, "DEVIS PROFESSIONNEL", ln=True, align='C')
+    pdf.ln(5)
+
+    # Tableau
+    pdf.set_font("Arial", 'B', 10)
+    pdf.cell(90, 10, "Designation", border=1)
+    pdf.cell(30, 10, "Quantite", border=1)
+    pdf.cell(60, 10, "Total HT", border=1, ln=True)
+
+    pdf.set_font("Arial", '', 10)
+    for m in liste_materiaux:
+        pdf.cell(90, 10, m['Matériau'], border=1)
+        pdf.cell(30, 10, str(m['Quantité']), border=1)
+        pdf.cell(60, 10, f"{m['Total HT']:.2f} €", border=1, ln=True)
+
+    # Totaux
+    pdf.ln(5)
+    pdf.set_font("Arial", 'B', 11)
+    pdf.cell(0, 8, f"Total HT : {total_ht:.2f} €", ln=True, align='R')
+    pdf.cell(0, 8, f"TVA ({tva_taux*100}%) : {total_ht * tva_taux:.2f} €", ln=True, align='R')
+    pdf.cell(0, 8, f"TOTAL TTC : {total_ht * (1 + tva_taux):.2f} €", ln=True, align='R')
+    
+    return pdf.output(dest='S').encode('latin-1')
+
+# --- 2. CONFIGURATION DES IDENTIFIANTS ---
 config = {
     'credentials': {
         'usernames': {
-            'artisan1': {  
+            'artisan1': {
                 'email': 'contact@durand-renov.fr',
                 'name': 'Jean Durand',
-                'password': 'abc', # Mot de passe simple pour tes tests
+                'password': 'abc',  # Idéalement à hacher plus tard
                 'entreprise': 'Durand Rénov SARL',
                 'siret': '123 456 789 00012',
                 'adresse': '12 rue de la Paix, 75000 Paris'
             }
         }
     },
-    'cookie': {
-        'expiry_days': 30,
-        'key': 'signature_unique_artisan',
-        'name': 'batimarge_auth'
-    }
+    'cookie': {'expiry_days': 30, 'key': 'batimarge_secret', 'name': 'batimarge_cookie'}
 }
 
-# --- 2. INITIALISATION ---
 authenticator = stauth.Authenticate(
     config['credentials'],
     config['cookie']['name'],
@@ -44,219 +70,58 @@ authenticator = stauth.Authenticate(
     config['cookie']['expiry_days']
 )
 
-# --- 3. FORMULAIRE DE CONNEXION ---
-# On ajoute une 'key' unique pour éviter l'erreur "duplicate form"
-authenticator.login(location='main', key='login_unique')
+# --- 3. LOGIQUE D'AUTHENTIFICATION ---
+authenticator.login(location='main', key='login_form')
 
 if st.session_state["authentication_status"]:
-    # SI CONNECTÉ : On affiche l'appli
+    # TOUT LE CODE CI-DESSOUS EST ACCESSIBLE UNIQUEMENT SI CONNECTÉ
     authenticator.logout('Déconnexion', 'sidebar')
-    st.title(f"Espace de {st.session_state['name']}")
-    st.info(f"Entreprise : {config['credentials']['usernames'][st.session_state['username']]['entreprise']}")
+    user_info = config['credentials']['usernames'][st.session_state['username']]
+    
+    st.title(f"Espace {user_info['entreprise']}")
+    st.write(f"Bonjour {st.session_state['name']}, préparez votre devis au juste prix.")
 
-    # --- METS LA SUITE DE TON CODE (MATERIAUX, PDF) ICI ---
-    st.write("Bienvenue dans votre outil de devis.")
+    # --- PARTIE MATÉRIAUX (Simulée pour l'exemple) ---
+    st.header("1. Choix des matériaux")
+    materiaux_dispos = {
+        "Ciment 35kg": 12.50,
+        "Plaque BA13": 9.20,
+        "Rail Placo 3m": 5.40
+    }
+    
+    selection = st.multiselect("Matériaux :", list(materiaux_dispos.keys()))
+    devis_liste = []
+    total_ht_materiaux = 0
+
+    if selection:
+        for item in selection:
+            pu = materiaux_dispos[item]
+            qte = st.number_input(f"Quantité pour {item}", min_value=1, value=1, key=f"qte_{item}")
+            sous_total = pu * qte
+            total_ht_materiaux += sous_total
+            devis_liste.append({"Matériau": item, "Quantité": qte, "Total HT": sous_total})
+
+        # --- TVA ET CALCULS ---
+        st.header("2. Paramètres fiscaux")
+        tva_options = {"Rénovation (5.5%)": 0.055, "Rénovation (10%)": 0.1, "Neuf (20%)": 0.2}
+        choix_tva = st.selectbox("Taux de TVA :", list(tva_options.keys()))
+        taux_tva = tva_options[choix_tva]
+
+        # --- SIGNATURE ---
+        st.header("3. Signature")
+        canvas_result = st_canvas(stroke_width=2, stroke_color="#000", background_color="#eee", height=100, key="canvas")
+
+        # --- GÉNÉRATION PDF ---
+        if st.button("💾 Créer le Devis PDF"):
+            pdf_data = generer_pdf(devis_liste, total_ht_materiaux, taux_tva, user_info)
+            st.download_button(
+                label="⬇️ Télécharger le Devis",
+                data=pdf_data,
+                file_name=f"Devis_{user_info['entreprise']}.pdf",
+                mime="application/pdf"
+            )
 
 elif st.session_state["authentication_status"] is False:
     st.error('Identifiant ou mot de passe incorrect')
 elif st.session_state["authentication_status"] is None:
-    st.warning('Veuillez vous connecter pour accéder aux tarifs temps réel.')
-
-# --- 1. CONFIGURATION ---
-st.set_page_config(page_title="BatiMarge Pro", layout="centered")
-
-CLIENTS_FILE = "clients.csv"
-DEVIS_FILE = "devis_archives.csv"
-PANIER_TEMP_FILE = "panier_temp.csv"
-
-# --- 2. RÉPARATION ET INITIALISATION DES FICHIERS ---
-def initialiser_fichiers():
-    fichiers = {
-        CLIENTS_FILE: ["Nom", "Contact"],
-        DEVIS_FILE: ["Client", "Article", "Vente HT", "Marge", "Nom Devis"],
-        PANIER_TEMP_FILE: ["Client", "Article", "Vente HT", "Marge"]
-    }
-    for f, cols in fichiers.items():
-        if not os.path.exists(f) or os.stat(f).st_size < 2:
-            pd.DataFrame(columns=cols).to_csv(f, index=False)
-
-initialiser_fichiers()
-
-if 'devis_selectionne' not in st.session_state:
-    st.session_state['devis_selectionne'] = None
-
-# --- 3. MENU LATÉRAL ---
-with st.sidebar:
-    st.title("🏗️ BatiMarge Pro")
-    menu = st.radio("MENU", ["Clients", "Nouveau Devis", "Archives"])
-    st.divider()
-    if st.button("🔄 Actualiser l'app"):
-        st.rerun()
-
-# --- 4. PAGE CLIENTS ---
-if menu == "Clients":
-    st.title("👥 Gestion Clients")
-    with st.form("nouveau_client"):
-        nom = st.text_input("Nom du client")
-        contact = st.text_input("Contact")
-        if st.form_submit_button("Enregistrer"):
-            if nom:
-                pd.DataFrame([{"Nom": nom, "Contact": contact}]).to_csv(CLIENTS_FILE, mode='a', header=False, index=False)
-                st.success("Client ajouté !")
-                st.rerun()
-
-    st.subheader("Liste")
-    st.table(pd.read_csv(CLIENTS_FILE))
-
-# --- 5. PAGE NOUVEAU DEVIS ---
-elif menu == "Nouveau Devis":
-    st.title("📝 Nouveau Devis")
-    df_c = pd.read_csv(CLIENTS_FILE)
-    
-    if df_c.empty:
-        st.warning("Ajoutez d'abord un client dans l'onglet 'Clients'.")
-    else:
-        client = st.selectbox("Choisir le client :", df_c["Nom"].unique())
-        art = st.text_input("Désignation")
-        pa = st.number_input("Prix Achat HT", min_value=0.0)
-        co = st.number_input("Coefficient", min_value=1.0, value=1.5)
-        pv = pa * co
-        
-        st.info(f"Prix de vente suggéré : {pv:.2f} € HT")
-        
-        if st.button("🛒 AJOUTER AU PANIER"):
-            if art:
-                pd.DataFrame([{"Client": client, "Article": art, "Vente HT": pv, "Marge": pv-pa}]).to_csv(PANIER_TEMP_FILE, mode='a', header=False, index=False)
-                st.rerun()
-
-        st.divider()
-        df_p = pd.read_csv(PANIER_TEMP_FILE)
-        if not df_p.empty:
-            st.write("### Panier actuel")
-            st.table(df_p)
-            nom_d = st.text_input("Nom du chantier (ex: Toiture Dupont)")
-            if st.button("💾 SAUVEGARDER LE DEVIS"):
-                if nom_d:
-                    df_p["Nom Devis"] = nom_d
-                    df_p.to_csv(DEVIS_FILE, mode='a', header=False, index=False)
-                    pd.DataFrame(columns=["Client", "Article", "Vente HT", "Marge"]).to_csv(PANIER_TEMP_FILE, index=False)
-                    st.success("Devis archivé !")
-                    st.rerun()
-
-# --- 6. PAGE ARCHIVES ---
-elif menu == "Archives":
-    df_a = pd.read_csv(DEVIS_FILE)
-    
-    if st.session_state['devis_selectionne']:
-        nom_sel = st.session_state['devis_selectionne']
-        if st.button("⬅️ Retour"):
-            st.session_state['devis_selectionne'] = None
-            st.rerun()
-            
-        data = df_a[df_a["Nom Devis"] == nom_sel]
-        st.header(f"Devis : {nom_sel}")
-        st.table(data[["Article", "Vente HT"]])
-        st.metric("TOTAL HT", f"{data['Vente HT'].sum():.2f} €")
-        
-    else:
-        st.title("🗄️ Archives")
-        if not df_a.empty:
-            for n in df_a["Nom Devis"].unique():
-                col1, col2 = st.columns([3, 1])
-                col1.write(f"📁 {n}")
-                if col2.button("Ouvrir", key=n):
-                    st.session_state['devis_selectionne'] = n
-                    st.rerun()
-        else:
-            st.info("Aucun devis.")
-from streamlit_drawable_canvas import st_canvas
-
-st.header("3. Signature du client")
-canvas_result = st_canvas(
-    fill_color="rgba(255, 165, 0, 0.3)",  # Couleur de remplissage
-    stroke_width=3,
-    stroke_color="#000000",
-    background_color="#eee",
-    height=150,
-    drawing_mode="freedraw",
-    key="canvas",
-)
-from fpdf import FPDF
-
-def generer_pdf(donnees_devis, total_ht, logo_path):
-    pdf = FPDF()
-    pdf.add_page()
-    
-    # 1. Ajout du Logo
-    try:
-        pdf.image(logo_path, x=10, y=8, w=33)
-    except:
-        pdf.set_font("Arial", 'B', 16)
-        pdf.cell(0, 10, "MON ENTREPRISE", ln=True)
-
-    pdf.ln(20) # Saut de ligne
-
-    # 2. Titre du Devis
-    pdf.set_font("Arial", 'B', 20)
-    pdf.cell(0, 10, "DEVIS PREVISIONNEL", ln=True, align='C')
-    pdf.ln(10)
-
-    # 3. Tableau des matériaux
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(90, 10, "Designation", border=1)
-    pdf.cell(30, 10, "Qté", border=1)
-    pdf.cell(30, 10, "PU HT", border=1)
-    pdf.cell(40, 10, "Total HT", border=1, ln=True)
-
-    pdf.set_font("Arial", '', 12)
-    for item in donnees_devis:
-        pdf.cell(90, 10, item['Matériau'], border=1)
-        pdf.cell(30, 10, str(item['Quantité']), border=1)
-        pdf.cell(30, 10, "-", border=1) # On pourrait ajouter le PU ici
-        pdf.cell(40, 10, f"{item['Total HT']:.2f} €", border=1, ln=True)
-
-    pdf.ln(10)
-    
-    # 4. Total Final
-    pdf.set_font("Arial", 'B', 14)
-    pdf.cell(0, 10, f"TOTAL GENERAL HT : {total_ht:.2f} EUR", ln=True, align='R')
-    
-    return pdf.output(dest='S').encode('latin-1') # Retourne le PDF en binaire
-if st.button("💾 Finaliser et Télécharger le PDF"):
-    pdf_bin = generer_pdf(devis_liste, total_final_ht, "logo.png")
-    
-    st.download_button(
-        label="Cliquer ici pour télécharger le devis",
-        data=pdf_bin,
-        file_name="devis_artisan.pdf",
-        mime="application/pdf"
-    )
-# Choix du taux de TVA
-st.header("3. Paramètres fiscaux")
-type_travaux = st.selectbox(
-    "Type de travaux :",
-    ["Rénovation énergétique (5.5%)", "Rénovation classique (10%)", "Neuf / Divers (20%)"]
-)
-
-# Dictionnaire de correspondance
-tva_map = {"Rénovation énergétique (5.5%)": 0.055, "Rénovation classique (10%)": 0.1, "Neuf / Divers (20%)": 0.2}
-taux_tva = tva_map[type_travaux]
-
-# Calculs finaux mis à jour
-montant_tva = total_final_ht * taux_tva
-total_ttc = total_final_ht + montant_tva
-
-st.metric("Total HT", f"{total_final_ht:.2f} €")
-st.metric(f"TVA ({taux_tva*100}%)", f"{montant_tva:.2f} €")
-st.success(f"### TOTAL TTC : {total_ttc:.2f} €")
-
-
-
-
-
-
-
-
-
-
-
+    st.warning('Veuillez vous connecter pour accéder à l\'outil.')
