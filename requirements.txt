@@ -2,3 +2,4 @@ streamlit
 pandas
 streamlit-drawable-canvas
 fpdf2
+streamlit-authenticator
