@@ -104,16 +104,3 @@ if menu == "Archives":
             <br>
             <table style="width:100%; border-collapse: collapse;">
                 <tr style="background:#333; color:white;">
-
-
-
-
-
-
-
-
-
-
-
-
-
