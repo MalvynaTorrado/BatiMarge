@@ -163,6 +163,15 @@ def generer_pdf(donnees_devis, total_ht, logo_path):
     pdf.cell(0, 10, f"TOTAL GENERAL HT : {total_ht:.2f} EUR", ln=True, align='R')
     
     return pdf.output(dest='S').encode('latin-1') # Retourne le PDF en binaire
+if st.button("💾 Finaliser et Télécharger le PDF"):
+    pdf_bin = generer_pdf(devis_liste, total_final_ht, "logo.png")
+    
+    st.download_button(
+        label="Cliquer ici pour télécharger le devis",
+        data=pdf_bin,
+        file_name="devis_artisan.pdf",
+        mime="application/pdf"
+    )
 
 
 
