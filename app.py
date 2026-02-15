@@ -39,7 +39,6 @@ authenticator = stauth.Authenticate(
 
 # Correction de l'erreur Photo 2 & 3 : On utilise une clé unique
 # --- FORMULAIRE D'INSCRIPTION ---
-register_user
 try:
     # Cette fonction crée automatiquement les champs : Identifiant, Email, Nom, Mot de passe
     if authenticator.register_user(label='Créer un compte', location='main'):
@@ -103,6 +102,7 @@ elif st.session_state["authentication_status"] is False:
     st.error('Identifiant ou mot de passe incorrect')
 elif st.session_state["authentication_status"] is None:
     st.info('Veuillez vous connecter pour accéder à l\'outil BatiMarge.')
+
 
 
 
