@@ -1,4 +1,12 @@
-import streamlit as st
+def check_password():
+    password = st.text_input("Mot de passe", type="password")
+    if password == st.secrets["password"]:
+        return True
+    return False
+
+if not check_password():
+    st.stop() # Arrête l'exécution si le mot de passe est faux
+    import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime
@@ -206,6 +214,7 @@ total_ttc = total_final_ht + montant_tva
 st.metric("Total HT", f"{total_final_ht:.2f} €")
 st.metric(f"TVA ({taux_tva*100}%)", f"{montant_tva:.2f} €")
 st.success(f"### TOTAL TTC : {total_ttc:.2f} €")
+
 
 
 
