@@ -51,7 +51,6 @@ st.write("---") # Une ligne de séparation visuelle
 
 # Ensuite, ton code de connexion habituel
 authenticator.login(location='main', key='login_form_unique')
-authenticator.login(location='main', key='login_form_unique')
 
 # --- 3. L'APPLICATION (UNIQUEMENT SI CONNECTÉ) ---
 if st.session_state["authentication_status"]:
@@ -103,4 +102,5 @@ elif st.session_state["authentication_status"] is False:
     st.error('Identifiant ou mot de passe incorrect')
 elif st.session_state["authentication_status"] is None:
     st.info('Veuillez vous connecter pour accéder à l\'outil BatiMarge.')
+
 
