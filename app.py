@@ -32,7 +32,6 @@ config = {
         'name': 'nom_du_cookie'
     }
 }
-
 # --- INITIALISATION DE L'AUTHENTIFICATION ---
 authenticator = stauth.Authenticate(
     config['credentials'],
@@ -41,24 +40,22 @@ authenticator = stauth.Authenticate(
     config['cookie']['expiry_days']
 )
 
-# Appeler le formulaire de connexion
-authenticator.login(location='main')
+# Utilisation d'une "key" unique pour éviter l'erreur de duplication
+login_result = authenticator.login(location='main', key='login_form_unique')
 
-
-# 2. Affichage du formulaire de connexion
-authenticator.login(location='main')
-
-if authentication_status:
-    # --- SI L'ARTISAN EST CONNECTÉ ---
+# Vérification du statut
+if st.session_state["authentication_status"]:
     authenticator.logout('Déconnexion', 'sidebar')
-    st.write(f'Bienvenue, **{name}** !')
+    st.write(f'Bienvenue **{st.session_state["name"]}**')
     
-    # ICI : Tout ton code précédent (calculs, PDF, etc.)
+    # --- METS TOUT TON CODE DE DEVIS ICI ---
+    # (Le sélecteur de matériaux, le calcul de TVA, le bouton PDF, etc.)
     
-elif authentication_status == False:
+elif st.session_state["authentication_status"] is False:
     st.error('Identifiant ou mot de passe incorrect')
-elif authentication_status == None:
-    st.warning('Veuillez entrer votre identifiant et mot de passe')
+elif st.session_state["authentication_status"] is None:
+    st.warning('Veuillez entrer votre identifiant et votre mot de passe')
+
 def check_password():
     password = st.text_input("Mot de passe", type="password")
     if password == st.secrets["password"]:
@@ -268,6 +265,7 @@ total_ttc = total_final_ht + montant_tva
 st.metric("Total HT", f"{total_final_ht:.2f} €")
 st.metric(f"TVA ({taux_tva*100}%)", f"{montant_tva:.2f} €")
 st.success(f"### TOTAL TTC : {total_ttc:.2f} €")
+
 
 
 
