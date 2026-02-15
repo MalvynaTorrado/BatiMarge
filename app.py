@@ -49,7 +49,7 @@ def generer_pdf(liste_materiaux, total_ht, tva_taux, user_info):
 # --- 2. CONFIGURATION DES IDENTIFIANTS ---
 config = {
     'credentials': {
-        'usernames': {
+        'usernames': 'Jean Durand',
             'artisan1': {
                 'email': 'contact@durand-renov.fr',
                 'name': 'Jean Durand',
@@ -125,3 +125,4 @@ elif st.session_state["authentication_status"] is False:
     st.error('Identifiant ou mot de passe incorrect')
 elif st.session_state["authentication_status"] is None:
     st.warning('Veuillez vous connecter pour accéder à l\'outil.')
+
