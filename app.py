@@ -110,6 +110,18 @@ elif menu == "Archives":
                     st.rerun()
         else:
             st.info("Aucun devis.")
+from streamlit_drawable_canvas import st_canvas
+
+st.header("3. Signature du client")
+canvas_result = st_canvas(
+    fill_color="rgba(255, 165, 0, 0.3)",  # Couleur de remplissage
+    stroke_width=3,
+    stroke_color="#000000",
+    background_color="#eee",
+    height=150,
+    drawing_mode="freedraw",
+    key="canvas",
+)
 
 
 
