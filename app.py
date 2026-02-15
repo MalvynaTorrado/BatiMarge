@@ -8,32 +8,42 @@ import streamlit as st
 import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
+import streamlit as st
+import streamlit_authenticator as stauth
 
-# 1. Définition des utilisateurs (Identifiant / Nom / Mot de passe haché)
-# Note : En production, on utilise des mots de passe hachés pour la sécurité
+# --- CONFIGURATION DES IDENTIFIANTS ---
 config = {
     'credentials': {
         'usernames': {
-            'artisan1': {
-                'email': 'contact@artisan.fr',
+            'artisan1': {  # C'est l'identifiant pour se connecter
+                'email': 'contact@durand-renov.fr',
                 'name': 'Jean Durand',
-                'password': 'abc' # À remplacer par un hash plus tard
-            }
+                'password': 'abc', # Idéalement, utilise un mot de passe haché ici
+                'entreprise': 'Durand Rénov SARL',
+                'siret': '123 456 789 00012',
+                'adresse': '12 rue de la Paix, 75000 Paris'
+            },
+            # Tu peux ajouter d'autres artisans ici en suivant le même modèle
         }
     },
     'cookie': {
         'expiry_days': 30,
-        'key': 'some_signature_key',
-        'name': 'artisan_auth_cookie'
+        'key': 'signature_unique_key',
+        'name': 'nom_du_cookie'
     }
 }
 
+# --- INITIALISATION DE L'AUTHENTIFICATION ---
 authenticator = stauth.Authenticate(
     config['credentials'],
     config['cookie']['name'],
     config['cookie']['key'],
     config['cookie']['expiry_days']
 )
+
+# Appeler le formulaire de connexion
+authenticator.login(location='main')
+
 
 # 2. Affichage du formulaire de connexion
 authenticator.login(location='main')
@@ -258,6 +268,7 @@ total_ttc = total_final_ht + montant_tva
 st.metric("Total HT", f"{total_final_ht:.2f} €")
 st.metric(f"TVA ({taux_tva*100}%)", f"{montant_tva:.2f} €")
 st.success(f"### TOTAL TTC : {total_ttc:.2f} €")
+
 
 
 
