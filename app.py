@@ -10,29 +10,33 @@ import yaml
 from yaml.loader import SafeLoader
 import streamlit as st
 import streamlit_authenticator as stauth
+import streamlit as st
+import streamlit_authenticator as stauth
+import pandas as pd
 
-# --- CONFIGURATION DES IDENTIFIANTS ---
+# --- 1. CONFIGURATION DES UTILISATEURS ---
+# On définit l'artisan ici directement
 config = {
     'credentials': {
         'usernames': {
-            'artisan1': {  # C'est l'identifiant pour se connecter
+            'artisan1': {  
                 'email': 'contact@durand-renov.fr',
                 'name': 'Jean Durand',
-                'password': 'abc', # Idéalement, utilise un mot de passe haché ici
+                'password': 'abc', # Mot de passe simple pour tes tests
                 'entreprise': 'Durand Rénov SARL',
                 'siret': '123 456 789 00012',
                 'adresse': '12 rue de la Paix, 75000 Paris'
-            },
-            # Tu peux ajouter d'autres artisans ici en suivant le même modèle
+            }
         }
     },
     'cookie': {
         'expiry_days': 30,
-        'key': 'signature_unique_key',
-        'name': 'nom_du_cookie'
+        'key': 'signature_unique_artisan',
+        'name': 'batimarge_auth'
     }
 }
-# --- INITIALISATION DE L'AUTHENTIFICATION ---
+
+# --- 2. INITIALISATION ---
 authenticator = stauth.Authenticate(
     config['credentials'],
     config['cookie']['name'],
@@ -40,44 +44,24 @@ authenticator = stauth.Authenticate(
     config['cookie']['expiry_days']
 )
 
-# Utilisation d'une "key" unique pour éviter l'erreur de duplication
-login_result = authenticator.login(location='main', key='login_form_unique')
+# --- 3. FORMULAIRE DE CONNEXION ---
+# On ajoute une 'key' unique pour éviter l'erreur "duplicate form"
+authenticator.login(location='main', key='login_unique')
 
-# Vérification du statut
 if st.session_state["authentication_status"]:
+    # SI CONNECTÉ : On affiche l'appli
     authenticator.logout('Déconnexion', 'sidebar')
-    st.write(f'Bienvenue **{st.session_state["name"]}**')
-    
-    # --- METS TOUT TON CODE DE DEVIS ICI ---
-    # (Le sélecteur de matériaux, le calcul de TVA, le bouton PDF, etc.)
-    
+    st.title(f"Espace de {st.session_state['name']}")
+    st.info(f"Entreprise : {config['credentials']['usernames'][st.session_state['username']]['entreprise']}")
+
+    # --- METS LA SUITE DE TON CODE (MATERIAUX, PDF) ICI ---
+    st.write("Bienvenue dans votre outil de devis.")
+
 elif st.session_state["authentication_status"] is False:
     st.error('Identifiant ou mot de passe incorrect')
 elif st.session_state["authentication_status"] is None:
-    st.warning('Veuillez entrer votre identifiant et votre mot de passe')
+    st.warning('Veuillez vous connecter pour accéder aux tarifs temps réel.')
 
-def check_password():
-    password = st.text_input("Mot de passe", type="password")
-    if password == st.secrets["password"]:
-        return True
-    return False
-
-if not check_password():
-    st.stop() # Arrête l'exécution si le mot de passe est faux
-# "https://docs.google.com/spreadsheets/d/e/2PACX-1vQSQjxU9E4qrkgukQutzuHtuIUcEhAjEUitVoe8eK96uRV7z4YiPzIfHqYyX586wNvfsbhF0x8o-MYf/pubhtml"
-
-# Fonction pour charger les données avec mise à jour automatique
-@st.cache_data(ttl=600) # Rafraîchit les données toutes les 10 minutes
-def load_data():
-    return pd.read_csv(SHEET_URL)
-
-try:
-    df_materiaux = load_data()
-    st.sidebar.success("✅ Prix du marché mis à jour")
-except:
-    st.sidebar.error("⚠️ Erreur de connexion aux prix")
-    # Backup au cas où la connexion échoue
-    df_materiaux = pd.DataFrame({"Matériau": ["Exemple"], "Prix Unitaire HT": [0.0], "Unité": ["-"]})
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="BatiMarge Pro", layout="centered")
 
@@ -265,6 +249,7 @@ total_ttc = total_final_ht + montant_tva
 st.metric("Total HT", f"{total_final_ht:.2f} €")
 st.metric(f"TVA ({taux_tva*100}%)", f"{montant_tva:.2f} €")
 st.success(f"### TOTAL TTC : {total_ttc:.2f} €")
+
 
 
 
