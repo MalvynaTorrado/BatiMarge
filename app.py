@@ -8,101 +8,108 @@ st.set_page_config(page_title="BatiMarge Pro", layout="centered")
 
 CLIENTS_FILE = "clients.csv"
 DEVIS_FILE = "devis_archives.csv"
-CATALOGUE_FILE = "catalogue.csv"
 PANIER_TEMP_FILE = "panier_temp.csv"
 
-def verifier_fichiers():
+# --- 2. RÉPARATION ET INITIALISATION DES FICHIERS ---
+def initialiser_fichiers():
     fichiers = {
         CLIENTS_FILE: ["Nom", "Contact"],
         DEVIS_FILE: ["Client", "Article", "Vente HT", "Marge", "Nom Devis"],
-        CATALOGUE_FILE: ["Article", "Prix Achat HT"],
         PANIER_TEMP_FILE: ["Client", "Article", "Vente HT", "Marge"]
     }
     for f, cols in fichiers.items():
-        if not os.path.exists(f) or os.stat(f).st_size == 0:
+        if not os.path.exists(f) or os.stat(f).st_size < 2:
             pd.DataFrame(columns=cols).to_csv(f, index=False)
 
-verifier_fichiers()
+initialiser_fichiers()
 
 if 'devis_selectionne' not in st.session_state:
     st.session_state['devis_selectionne'] = None
 
-# --- 2. STYLE CSS ---
-st.markdown("""
-    <style>
-    .stApp { background-color: #F8F9FA; }
-    .stButton>button { border-radius: 12px; font-weight: bold; }
-    @media print {
-        .no-print { display: none !important; }
-        .print-only { display: block !important; }
-    }
-    .devis-box {
-        background-color: white; padding: 40px; border: 1px solid #EEE;
-        border-radius: 10px; color: black; font-family: sans-serif;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
 # --- 3. MENU LATÉRAL ---
 with st.sidebar:
-    if os.path.exists("logo.png"): st.image("logo.png", width=200)
     st.title("🏗️ BatiMarge Pro")
-    menu = st.radio("NAVIGATION", ["Tableau de bord", "Fiches Clients", "Catalogue", "Nouveau Devis", "Archives", "Scan-Marge"])
+    menu = st.radio("MENU", ["Clients", "Nouveau Devis", "Archives"])
+    st.divider()
+    if st.button("🔄 Actualiser l'app"):
+        st.rerun()
 
-# --- 4. LOGIQUE DES PAGES ---
-
-if menu == "Archives":
-    df_archives = pd.read_csv(DEVIS_FILE)
-    
-    if st.session_state['devis_selectionne'] is not None:
-        nom_d = st.session_state['devis_selectionne']
-        
-        # BOUTONS DE NAVIGATION
-        col_nav1, col_nav2 = st.columns([1,1])
-        with col_nav1:
-            if st.button("⬅️ Retour à la liste"):
-                st.session_state['devis_selectionne'] = None
+# --- 4. PAGE CLIENTS ---
+if menu == "Clients":
+    st.title("👥 Gestion Clients")
+    with st.form("nouveau_client"):
+        nom = st.text_input("Nom du client")
+        contact = st.text_input("Contact")
+        if st.form_submit_button("Enregistrer"):
+            if nom:
+                pd.DataFrame([{"Nom": nom, "Contact": contact}]).to_csv(CLIENTS_FILE, mode='a', header=False, index=False)
+                st.success("Client ajouté !")
                 st.rerun()
-        with col_nav2:
-            st.info("💡 Pour le PDF : Faites 'Clic droit' -> 'Imprimer' -> 'Enregistrer en PDF'")
 
-        # --- PRÉPARATION DES DONNÉES DU DEVIS ---
-        donnees = df_archives[df_archives["Nom Devis"] == nom_d]
-        client_nom = donnees["Client"].iloc[0]
-        date_jour = datetime.now().strftime("%d/%m/%Y")
-        total_ht = donnees["Vente HT"].sum()
+    st.subheader("Liste")
+    st.table(pd.read_csv(CLIENTS_FILE))
+
+# --- 5. PAGE NOUVEAU DEVIS ---
+elif menu == "Nouveau Devis":
+    st.title("📝 Nouveau Devis")
+    df_c = pd.read_csv(CLIENTS_FILE)
+    
+    if df_c.empty:
+        st.warning("Ajoutez d'abord un client dans l'onglet 'Clients'.")
+    else:
+        client = st.selectbox("Choisir le client :", df_c["Nom"].unique())
+        art = st.text_input("Désignation")
+        pa = st.number_input("Prix Achat HT", min_value=0.0)
+        co = st.number_input("Coefficient", min_value=1.0, value=1.5)
+        pv = pa * co
         
-        # --- DESIGN DU DEVIS HTML (FORMAT PDF) ---
-        lignes_html = ""
-        for _, row in donnees.iterrows():
-            lignes_html += f"""
-            <tr>
-                <td style="padding:10px; border-bottom:1px solid #EEE;">{row['Article']}</td>
-                <td style="padding:10px; border-bottom:1px solid #EEE; text-align:right;">{row['Vente HT']:.2f} €</td>
-            </tr>
-            """
+        st.info(f"Prix de vente suggéré : {pv:.2f} € HT")
+        
+        if st.button("🛒 AJOUTER AU PANIER"):
+            if art:
+                pd.DataFrame([{"Client": client, "Article": art, "Vente HT": pv, "Marge": pv-pa}]).to_csv(PANIER_TEMP_FILE, mode='a', header=False, index=False)
+                st.rerun()
 
-        devis_template = f
-        <div class="devis-box">
-            <table style="width:100%;">
-                <tr>
-                    <td style="width:50%;">
-                        <h2 style="color:#FF4500; margin:0;">DEVIS PRO</h2>
-                        <p style="font-size:12px; color:#555;">Document généré par BatiMarge</p>
-                    </td>
-                    <td style="width:50%; text-align:right;">
-                        <p><b>Date :</b> {date_jour}</p>
-                        <p><b>Devis n° :</b> {nom_d.upper()}</p>
-                    </td>
-                </tr>
-            </table>
-            <br><br>
-            <div style="background:#F9F9F9; padding:15px; border-radius:5px;">
-                <p style="margin:0; color:#777; font-size:12px;">DESTINATAIRE</p>
-                <h3 style="margin:0;">{client_nom}</h3>
-            </div>
-            <br>
-            <table style="width:100%; border-collapse: collapse;">
-                <tr style="background:#333; color:white;">
+        st.divider()
+        df_p = pd.read_csv(PANIER_TEMP_FILE)
+        if not df_p.empty:
+            st.write("### Panier actuel")
+            st.table(df_p)
+            nom_d = st.text_input("Nom du chantier (ex: Toiture Dupont)")
+            if st.button("💾 SAUVEGARDER LE DEVIS"):
+                if nom_d:
+                    df_p["Nom Devis"] = nom_d
+                    df_p.to_csv(DEVIS_FILE, mode='a', header=False, index=False)
+                    pd.DataFrame(columns=["Client", "Article", "Vente HT", "Marge"]).to_csv(PANIER_TEMP_FILE, index=False)
+                    st.success("Devis archivé !")
+                    st.rerun()
+
+# --- 6. PAGE ARCHIVES ---
+elif menu == "Archives":
+    df_a = pd.read_csv(DEVIS_FILE)
+    
+    if st.session_state['devis_selectionne']:
+        nom_sel = st.session_state['devis_selectionne']
+        if st.button("⬅️ Retour"):
+            st.session_state['devis_selectionne'] = None
+            st.rerun()
+            
+        data = df_a[df_a["Nom Devis"] == nom_sel]
+        st.header(f"Devis : {nom_sel}")
+        st.table(data[["Article", "Vente HT"]])
+        st.metric("TOTAL HT", f"{data['Vente HT'].sum():.2f} €")
+        
+    else:
+        st.title("🗄️ Archives")
+        if not df_a.empty:
+            for n in df_a["Nom Devis"].unique():
+                col1, col2 = st.columns([3, 1])
+                col1.write(f"📁 {n}")
+                if col2.button("Ouvrir", key=n):
+                    st.session_state['devis_selectionne'] = n
+                    st.rerun()
+        else:
+            st.info("Aucun devis.")
+
 
 
