@@ -82,7 +82,7 @@ if menu == "Archives":
             </tr>
             """
 
-        devis_template = f"""
+        devis_template = f"
         <div class="devis-box">
             <table style="width:100%;">
                 <tr>
@@ -104,3 +104,4 @@ if menu == "Archives":
             <br>
             <table style="width:100%; border-collapse: collapse;">
                 <tr style="background:#333; color:white;">
+
