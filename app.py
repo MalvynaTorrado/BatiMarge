@@ -36,7 +36,7 @@ authenticator = stauth.Authenticate(
 )
 
 # 2. Affichage du formulaire de connexion
-name, authentication_status, username = authenticator.login('Connexion', 'main')
+authenticator.login(location='main')
 
 if authentication_status:
     # --- SI L'ARTISAN EST CONNECTÉ ---
@@ -258,6 +258,7 @@ total_ttc = total_final_ht + montant_tva
 st.metric("Total HT", f"{total_final_ht:.2f} €")
 st.metric(f"TVA ({taux_tva*100}%)", f"{montant_tva:.2f} €")
 st.success(f"### TOTAL TTC : {total_ttc:.2f} €")
+
 
 
 
