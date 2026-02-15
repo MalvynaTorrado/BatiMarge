@@ -122,6 +122,47 @@ canvas_result = st_canvas(
     drawing_mode="freedraw",
     key="canvas",
 )
+from fpdf import FPDF
+
+def generer_pdf(donnees_devis, total_ht, logo_path):
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # 1. Ajout du Logo
+    try:
+        pdf.image(logo_path, x=10, y=8, w=33)
+    except:
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(0, 10, "MON ENTREPRISE", ln=True)
+
+    pdf.ln(20) # Saut de ligne
+
+    # 2. Titre du Devis
+    pdf.set_font("Arial", 'B', 20)
+    pdf.cell(0, 10, "DEVIS PREVISIONNEL", ln=True, align='C')
+    pdf.ln(10)
+
+    # 3. Tableau des matériaux
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(90, 10, "Designation", border=1)
+    pdf.cell(30, 10, "Qté", border=1)
+    pdf.cell(30, 10, "PU HT", border=1)
+    pdf.cell(40, 10, "Total HT", border=1, ln=True)
+
+    pdf.set_font("Arial", '', 12)
+    for item in donnees_devis:
+        pdf.cell(90, 10, item['Matériau'], border=1)
+        pdf.cell(30, 10, str(item['Quantité']), border=1)
+        pdf.cell(30, 10, "-", border=1) # On pourrait ajouter le PU ici
+        pdf.cell(40, 10, f"{item['Total HT']:.2f} €", border=1, ln=True)
+
+    pdf.ln(10)
+    
+    # 4. Total Final
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(0, 10, f"TOTAL GENERAL HT : {total_ht:.2f} EUR", ln=True, align='R')
+    
+    return pdf.output(dest='S').encode('latin-1') # Retourne le PDF en binaire
 
 
 
