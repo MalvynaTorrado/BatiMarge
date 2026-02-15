@@ -4,6 +4,51 @@ import os
 from datetime import datetime
 import streamlit as st
 import pandas as pd
+import streamlit as st
+import streamlit_authenticator as stauth
+import yaml
+from yaml.loader import SafeLoader
+
+# 1. Définition des utilisateurs (Identifiant / Nom / Mot de passe haché)
+# Note : En production, on utilise des mots de passe hachés pour la sécurité
+config = {
+    'credentials': {
+        'usernames': {
+            'artisan1': {
+                'email': 'contact@artisan.fr',
+                'name': 'Jean Durand',
+                'password': 'abc' # À remplacer par un hash plus tard
+            }
+        }
+    },
+    'cookie': {
+        'expiry_days': 30,
+        'key': 'some_signature_key',
+        'name': 'artisan_auth_cookie'
+    }
+}
+
+authenticator = stauth.Authenticate(
+    config['credentials'],
+    config['cookie']['name'],
+    config['cookie']['key'],
+    config['cookie']['expiry_days']
+)
+
+# 2. Affichage du formulaire de connexion
+name, authentication_status, username = authenticator.login('Connexion', 'main')
+
+if authentication_status:
+    # --- SI L'ARTISAN EST CONNECTÉ ---
+    authenticator.logout('Déconnexion', 'sidebar')
+    st.write(f'Bienvenue, **{name}** !')
+    
+    # ICI : Tout ton code précédent (calculs, PDF, etc.)
+    
+elif authentication_status == False:
+    st.error('Identifiant ou mot de passe incorrect')
+elif authentication_status == None:
+    st.warning('Veuillez entrer votre identifiant et mot de passe')
 def check_password():
     password = st.text_input("Mot de passe", type="password")
     if password == st.secrets["password"]:
@@ -213,6 +258,7 @@ total_ttc = total_final_ht + montant_tva
 st.metric("Total HT", f"{total_final_ht:.2f} €")
 st.metric(f"TVA ({taux_tva*100}%)", f"{montant_tva:.2f} €")
 st.success(f"### TOTAL TTC : {total_ttc:.2f} €")
+
 
 
 
